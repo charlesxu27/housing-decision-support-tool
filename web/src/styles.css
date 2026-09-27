@@ -531,6 +531,80 @@ input:focus-visible {
   color: var(--ink);
 }
 
+.district-codes {
+  display: inline;
+}
+
+.district-code {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dotted currentColor;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: help;
+}
+
+.district-code + .district-code::before {
+  content: ', ';
+}
+
+.district-code:hover,
+.district-code:focus-visible {
+  color: var(--green-dark);
+  outline: none;
+}
+
+.district-tip {
+  position: fixed;
+  z-index: 40;
+  display: grid;
+  gap: 3px;
+  width: min(260px, calc(100vw - 24px));
+  padding: 8px 10px;
+  border: 1px solid rgba(217, 222, 215, 0.95);
+  border-radius: 8px;
+  background: rgba(255, 254, 250, 0.98);
+  box-shadow: 0 8px 22px rgba(24, 37, 31, 0.18);
+  color: #3d4741;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  transform: translate(-50%, calc(-100% - 8px));
+  pointer-events: none;
+}
+
+.district-tip--below {
+  transform: translate(-50%, 8px);
+}
+
+.district-tip strong {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.district-tip__name {
+  font-weight: 650;
+}
+
+.district-tip__about,
+.district-tip__why,
+.district-tip__draft {
+  color: #566159;
+}
+
+.district-tip__why {
+  margin-top: 2px;
+  color: var(--ink);
+}
+
+.district-tip__draft {
+  font-size: 10.5px;
+}
+
 .why-color__check ul {
   margin: 0;
   padding-left: 14px;

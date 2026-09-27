@@ -1,4 +1,5 @@
 import { findZoningRule } from '../data/load'
+import { describeDistrict } from '../data/zoningGlossary'
 import type {
   AreaRecord,
   Band,
@@ -258,7 +259,10 @@ function zoningMetrics(
   }
 
   const rule = findZoningRule(matrix, parcel.zone, type)
-  const metrics = [`District ${parcel.zone} in ${parcel.muni}.`]
+  const described = describeDistrict(parcel.zone)
+  const metrics = [
+    `This lot only: ${described.name} (${parcel.zone}) in ${parcel.muni}. ${described.about}`,
+  ]
   if (!rule) {
     metrics.push('No matrix row covers this district for the selected housing type.')
     return metrics

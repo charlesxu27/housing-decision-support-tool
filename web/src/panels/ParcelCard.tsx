@@ -13,6 +13,7 @@ import { parcelStatus } from '../model/area'
 import { explainParcel } from '../model/parcelInsight'
 import { STATUS_LABELS, TYPE_LABELS } from '../shared/labels'
 import type { MapMode } from '../shared/mapState'
+import { DistrictCode } from './DistrictCode'
 import { SourceCite } from './SourceCite'
 
 interface ParcelCardProps {
@@ -148,6 +149,17 @@ export function ParcelCard({
                   <strong>{check.result}</strong>
                 </p>
                 <ul>
+                  {check.id === 'allowed' && parcel.zone ? (
+                    <li>
+                      This lot:{' '}
+                      <DistrictCode
+                        code={parcel.zone}
+                        typeLabel={typeLabel}
+                        status={lookupAllowed(parcel.zone, type)}
+                        draft={zoningDraft}
+                      />
+                    </li>
+                  ) : null}
                   {check.metrics.map((metric) => (
                     <li key={metric}>{metric}</li>
                   ))}
@@ -188,9 +200,16 @@ export function ParcelCard({
           <div>
             <dt>Zoning</dt>
             <dd>
-              {parcel.zone == null
-                ? 'Outside the City'
-                : `${parcel.zone}${zoningDraft ? ' (draft)' : ''}`}
+              {parcel.zone == null ? (
+                'Outside the City'
+              ) : (
+                <DistrictCode
+                  code={parcel.zone}
+                  typeLabel={typeLabel}
+                  status={lookupAllowed(parcel.zone, type)}
+                  draft={zoningDraft}
+                />
+              )}
             </dd>
           </div>
           <div>

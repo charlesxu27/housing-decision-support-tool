@@ -27,6 +27,7 @@ import type {
   ZoningDistrictProperties,
 } from '../data/types'
 import { dataVintageLabel } from '../data/vintage'
+import { districtHoverText } from '../data/zoningGlossary'
 import {
   areaStatus,
   heaviestMember,
@@ -365,9 +366,6 @@ export function MapView({
           const feature = object as Feature<Geometry, ParcelTileProperties> | undefined
           if (!feature) return
           onSelectParcel(feature.properties)
-          if (areasById.has(feature.properties.tract)) {
-            onSelectArea(feature.properties.tract)
-          }
         },
         updateTriggers: {
           getFillColor: [mode, type, areasById, lookupAllowed],
@@ -477,7 +475,14 @@ export function MapView({
       const area = areasById.get(props.tract)
       const status = parcelStatus(props, area, type, lookupAllowed)
       return {
-        text: `PIN ${props.pin}\n${props.use.replaceAll('_', ' ')} · ${Math.round(props.lot).toLocaleString()} sq ft\nZone ${props.zone ?? 'unknown (outside City)'}\n${TYPE_LABELS[type]}: ${STATUS_LABELS[status]}\nClick to see why this color`,
+        text: `PIN ${props.pin}\n${props.use.replaceAll('_', ' ')} · ${Math.round(props.lot).toLocaleString()} sq ft\n${
+          props.zone
+            ? districtHoverText(props.zone, {
+                typeLabel: TYPE_LABELS[type],
+                status: lookupAllowed(props.zone, type),
+              })
+            : 'Zone unknown (outside the City)'
+        }\nLot status: ${STATUS_LABELS[status]}\nClick to see why this color`,
         className: 'map-tooltip',
       }
     }
@@ -500,7 +505,10 @@ export function MapView({
 
     if (id === 'overlay-zoning') {
       const props = properties as ZoningDistrictProperties
-      return { text: `${props.district}\n${props.label}`, className: 'map-tooltip' }
+      return {
+        text: districtHoverText(props.district),
+        className: 'map-tooltip',
+      }
     }
 
     return null

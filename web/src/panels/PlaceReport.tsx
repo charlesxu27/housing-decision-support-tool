@@ -1,8 +1,10 @@
 import { CHECK_SOURCE_IDS } from '../data/citations'
-import type { AreaRecord, MatchStatus, SourceRecord } from '../data/types'
+import type { LookupAllowed } from '../data/load'
+import type { AreaRecord, MatchStatus, SourceRecord, TypeId } from '../data/types'
 import { areaPlace } from '../model/area'
 import { pct } from '../shared/format'
 import { STATUS_LABELS } from '../shared/labels'
+import { DistrictCodeList } from './DistrictCode'
 import { SourceCatalog } from './SourceCatalog'
 import { SourceCite } from './SourceCite'
 
@@ -26,6 +28,9 @@ interface PlaceReportProps {
   sources: readonly SourceRecord[]
   /** Short data-vintage line shown in the heading chip. */
   dataVintage: string
+  selectedType?: TypeId
+  lookupAllowed?: LookupAllowed
+  zoningDraft?: boolean
 }
 
 const BAND_LABELS: Record<string, string> = {
@@ -100,6 +105,9 @@ export function PlaceReport({
   unknowns,
   sources,
   dataVintage,
+  selectedType,
+  lookupAllowed,
+  zoningDraft = false,
 }: PlaceReportProps) {
   const householdSmall = area.households.hh_1_2
   const stockSmall = area.stock.br_0_1
@@ -255,9 +263,13 @@ export function PlaceReport({
           <div>
             <dt>Zoning districts</dt>
             <dd>
-              {area.zoningDistricts.length > 0
-                ? area.zoningDistricts.join(', ')
-                : 'not available'}
+              <DistrictCodeList
+                codes={area.zoningDistricts}
+                type={selectedType}
+                typeLabel={selectedTypeLabel}
+                lookupAllowed={lookupAllowed}
+                draft={zoningDraft}
+              />
             </dd>
           </div>
         </dl>

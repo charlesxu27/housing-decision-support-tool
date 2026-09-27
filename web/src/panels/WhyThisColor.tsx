@@ -1,5 +1,7 @@
 import { CHECK_SOURCE_IDS } from '../data/citations'
+import type { LookupAllowed } from '../data/load'
 import type { AreaRecord, Band, MatchStatus, SourceRecord, TypeId } from '../data/types'
+import { DistrictCodeList } from './DistrictCode'
 import { SourceCite } from './SourceCite'
 import { NEED_COLORS, STATUS_COLORS } from '../map/colors'
 import {
@@ -20,6 +22,7 @@ interface WhyThisColorProps {
   mode: MapMode
   /** True when the Pittsburgh zoning matrix has not been human-verified. */
   zoningDraft: boolean
+  lookupAllowed: LookupAllowed
   sources: readonly SourceRecord[]
   onClose: () => void
 }
@@ -163,9 +166,7 @@ function checkMetrics(
           `Zoning for ${area.muni} is not in the snapshot; Allowed is computed only inside Pittsburgh.`,
         ]
       }
-      const metrics = [
-        `Districts present: ${area.zoningDistricts.length > 0 ? area.zoningDistricts.join(', ') : 'not available'}`,
-      ]
+      const metrics: string[] = []
       const breakdown = shareBreakdown(area, type)
       if (breakdown) metrics.push(`Parcel share by status: ${breakdown}`)
       metrics.push(
@@ -185,6 +186,7 @@ export function WhyThisColor({
   typeLabel,
   mode,
   zoningDraft,
+  lookupAllowed,
   sources,
   onClose,
 }: WhyThisColorProps) {
@@ -260,6 +262,18 @@ export function WhyThisColor({
                   <strong>{checkResult(check, area, type)}</strong>
                 </p>
                 <ul>
+                  {check.id === 'allowed' && area.inCity ? (
+                    <li>
+                      Districts present:{' '}
+                      <DistrictCodeList
+                        codes={area.zoningDistricts}
+                        type={type}
+                        typeLabel={typeLabel}
+                        lookupAllowed={lookupAllowed}
+                        draft={zoningDraft}
+                      />
+                    </li>
+                  ) : null}
                   {checkMetrics(check.id, area, type, zoningDraft).map((metric) => (
                     <li key={metric}>{metric}</li>
                   ))}

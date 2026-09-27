@@ -17,6 +17,7 @@ import {
   areaLabel,
   areaStatus,
   heaviestMember,
+  parcelStatus,
   summariesForArea,
 } from '../model/area'
 import {
@@ -358,12 +359,40 @@ function Workspace({ snapshot }: WorkspaceProps) {
       />
 
       <DecisionRibbon
-        placeName={areaLabel(selected)}
+        placeName={
+          selectedParcel ? `PIN ${selectedParcel.pin}` : areaLabel(selected)
+        }
         typeLabel={TYPE_LABELS[selectedType]}
         need={selected.need[selectedType]}
-        fit={selected.fit[selectedType].band}
-        allowed={selected.allowed[selectedType]}
-        action={areaStatus(selected, selectedType)}
+        fit={
+          selectedParcel
+            ? selectedParcel[`f_${selectedType}`] === 1
+              ? 'high'
+              : 'low'
+            : selected.fit[selectedType].band
+        }
+        allowed={
+          selectedParcel
+            ? lookupAllowed(selectedParcel.zone, selectedType)
+            : selected.allowed[selectedType]
+        }
+        action={
+          selectedParcel
+            ? parcelStatus(
+                selectedParcel,
+                selected,
+                selectedType,
+                lookupAllowed,
+              )
+            : areaStatus(selected, selectedType)
+        }
+        fitExplanation={
+          selectedParcel
+            ? selectedParcel[`f_${selectedType}`] === 1
+              ? 'This lot passes the site-fit screen for this housing type.'
+              : 'This lot does not pass the site-fit screen for this housing type.'
+            : undefined
+        }
       />
 
       <section className="map-panel workspace-map">
@@ -381,6 +410,7 @@ function Workspace({ snapshot }: WorkspaceProps) {
           }}
           selectedPin={selectedParcel?.pin ?? null}
           onSelectParcel={(parcel) => {
+            if (areasById.has(parcel.tract)) setSelectedId(parcel.tract)
             setSelectedParcel(parcel)
             setExplanationOpen(false)
           }}
@@ -424,6 +454,7 @@ function Workspace({ snapshot }: WorkspaceProps) {
             typeLabel={TYPE_LABELS[selectedType]}
             mode={mode}
             zoningDraft={zoningDraft}
+            lookupAllowed={lookupAllowed}
             sources={manifest.sources}
             onClose={() => setExplanationOpen(false)}
           />
@@ -447,6 +478,9 @@ function Workspace({ snapshot }: WorkspaceProps) {
               unknowns={unknowns}
               sources={manifest.sources}
               dataVintage={dataVintage}
+              selectedType={selectedType}
+              lookupAllowed={lookupAllowed}
+              zoningDraft={zoningDraft}
             />
           </div>
         </details>
