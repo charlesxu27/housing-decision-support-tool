@@ -7,6 +7,7 @@ import {
   type MatchCheckId,
   type MatchCheckOutcome,
 } from '../model/match'
+import { STATUS_LABELS } from '../shared/labels'
 
 interface WhyThisColorProps {
   cell: HexRecord
@@ -15,17 +16,6 @@ interface WhyThisColorProps {
   typeLabel: string
   mode: MapMode
   onClose: () => void
-}
-
-const STATUS_LABELS: Record<MatchStatus, string> = {
-  ready_match: 'Ready match',
-  needs_approval: 'Needs approval',
-  blocked_by_zoning: 'Blocked by zoning',
-  needed_but_hard: 'Needed but hard',
-  low_priority: 'Low priority',
-  zoning_unknown: 'Zoning unknown',
-  not_recommended: 'Not recommended',
-  insufficient_data: 'Insufficient data',
 }
 
 const STATUS_VERDICTS: Record<MatchStatus, string> = {

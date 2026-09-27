@@ -1,10 +1,13 @@
+import type { MatchStatus } from '../data/types'
+import { STATUS_LABELS } from '../shared/labels'
+
 export interface HousingTypeRow {
   id: string
   label: string
   need: string
   fit: string
   allowed: string
-  status: string
+  status: MatchStatus
   parcels: number
   homes: [number, number]
   zoningNote: string
@@ -34,17 +37,6 @@ const ALLOWED_LABELS: Record<string, string> = {
   conditional_use: '△ Conditional use',
   not_permitted: '× Not permitted',
   unknown: '? Unknown',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  ready_match: 'Ready match',
-  needs_approval: 'Needs approval',
-  blocked_by_zoning: 'Blocked by zoning',
-  needed_but_hard: 'Needed but hard',
-  low_priority: 'Low priority',
-  zoning_unknown: 'Zoning unknown',
-  not_recommended: 'Not recommended',
-  insufficient_data: 'Insufficient data',
 }
 
 function PercentBar({
@@ -160,7 +152,7 @@ export function PlaceReport({
                 </td>
                 <td>
                   <span className={`status-dot status-${row.status}`} />
-                  {STATUS_LABELS[row.status] ?? row.status}
+                  {STATUS_LABELS[row.status]}
                 </td>
               </tr>
             ))}
