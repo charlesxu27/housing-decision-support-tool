@@ -55,6 +55,12 @@ describe('public site routes', () => {
     expect(renderRoute(path)).toContain(heading)
   })
 
+  it('renders the map workspace in its loading state before data arrives', () => {
+    const markup = renderRoute('/map')
+    expect(markup).toContain('Loading the map workspace')
+    expect(markup).not.toMatch(/fixture|illustrative/i)
+  })
+
   it('links the landing page to the planning wizard', () => {
     expect(renderRoute('/')).toContain('href="/plan"')
   })
