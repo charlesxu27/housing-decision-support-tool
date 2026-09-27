@@ -138,7 +138,32 @@ async def llm_narrative(
 
     def _call():
         client = OpenAI(api_key=key)
-        schema = RecommendationText.model_json_schema()
+        schema = {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "headline": {"type": "string"},
+                "summary": {"type": "string"},
+                "demand": {"type": "string"},
+                "transit": {"type": "string"},
+                "equity": {"type": "string"},
+                "climate": {"type": "string"},
+                "cost": {"type": "string"},
+                "size": {"type": "string"},
+                "sources_note": {"type": "string"},
+            },
+            "required": [
+                "headline",
+                "summary",
+                "demand",
+                "transit",
+                "equity",
+                "climate",
+                "cost",
+                "size",
+                "sources_note",
+            ],
+        }
         completion = client.chat.completions.create(
             model=model,
             messages=[
@@ -149,22 +174,31 @@ async def llm_narrative(
                         "Use ONLY the JSON facts provided. Do not invent zoning rules, unit counts, or dollar figures. "
                         "If a field is null, say it is unknown. Cite dataset names (assessments, zoning GIS, FEMA, ACS, OSM). "
                         "Keep each section to 2–4 sentences. headline <= 90 characters. "
-                        "Reply with a JSON object matching this schema: "
-                        + json.dumps(schema)
-                        + " "
+                        "Return a filled recommendation object (string values), never a JSON Schema. "
                         + audience_instruction
                     ),
                 },
                 {"role": "user", "content": json.dumps(slim)},
             ],
-            response_format={"type": "json_object"},
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "recommendation_text",
+                    "strict": True,
+                    "schema": schema,
+                },
+            },
             temperature=0.4,
         )
         content = completion.choices[0].message.content or "{}"
-        return RecommendationText.model_validate_json(content)
+        payload = json.loads(content)
+        if "properties" in payload and "headline" not in payload:
+            raise ValueError("model returned a schema instead of values")
+        return RecommendationText.model_validate(payload)
 
     try:
         parsed = await asyncio.to_thread(_call)
-    except Exception:
+    except Exception as exc:
+        print(f"OpenAI narrative failed ({type(exc).__name__}: {exc}); using template.")
         return template_narrative(card, ranked, audience), "template"
     return parsed, "openai"

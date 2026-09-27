@@ -14,8 +14,12 @@ from .schemas import RecommendRequest
 from .scoring import score_types
 
 ROOT = Path(__file__).resolve().parents[3]
-load_dotenv(ROOT / ".env")
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+_root_env = ROOT / ".env"
+_api_env = Path(__file__).resolve().parents[1] / ".env"
+if _root_env.exists():
+    load_dotenv(_root_env, override=True)
+if _api_env.exists():
+    load_dotenv(_api_env, override=True)
 
 app = FastAPI(title="PGH Housing Advisor", version="0.1.0")
 app.add_middleware(
