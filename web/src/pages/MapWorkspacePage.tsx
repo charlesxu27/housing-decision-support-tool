@@ -395,71 +395,77 @@ function Workspace({ snapshot }: WorkspaceProps) {
         }
       />
 
-      <section className="map-panel workspace-map">
-        <MapView
-          snapshot={snapshot}
-          selected={selected}
-          type={selectedType}
-          mode={mode}
-          is3d={is3d}
-          focus={focus}
-          onSelectArea={(id) => {
-            selectArea(id)
-            setSelectedParcel(null)
-            setExplanationOpen(true)
-          }}
-          selectedPin={selectedParcel?.pin ?? null}
-          onSelectParcel={(parcel) => {
-            if (areasById.has(parcel.tract)) setSelectedId(parcel.tract)
-            setSelectedParcel(parcel)
-            setExplanationOpen(false)
-          }}
-        />
-        <Legend mode={mode} />
-        <button
-          className="map-how-btn"
-          type="button"
-          aria-controls="how-map-generated"
-          aria-expanded={howMapOpen}
-          aria-label="How was this map generated?"
-          title="How was this map generated?"
-          onClick={() => setHowMapOpen(true)}
-        >
-          ?
-        </button>
-        {howMapOpen ? (
-          <HowMapGenerated
-            sources={manifest.sources}
-            onClose={() => setHowMapOpen(false)}
-          />
-        ) : null}
-        {selectedParcel ? (
-          <ParcelCard
-            parcel={selectedParcel}
-            area={areasById.get(selectedParcel.tract)}
+      <div className="map-stage">
+        <section className="map-panel workspace-map">
+          <MapView
+            snapshot={snapshot}
+            selected={selected}
             type={selectedType}
-            typeLabel={TYPE_LABELS[selectedType]}
             mode={mode}
-            lookupAllowed={lookupAllowed}
-            zoningMatrix={zoningMatrix}
-            zoningDraft={zoningDraft}
-            sources={manifest.sources}
-            onClose={() => setSelectedParcel(null)}
+            is3d={is3d}
+            focus={focus}
+            onSelectArea={(id) => {
+              selectArea(id)
+              setSelectedParcel(null)
+              setExplanationOpen(true)
+            }}
+            selectedPin={selectedParcel?.pin ?? null}
+            onSelectParcel={(parcel) => {
+              if (areasById.has(parcel.tract)) setSelectedId(parcel.tract)
+              setSelectedParcel(parcel)
+              setExplanationOpen(false)
+            }}
           />
-        ) : explanationOpen ? (
-          <WhyThisColor
-            area={selected}
-            placeName={areaLabel(selected)}
-            type={selectedType}
-            typeLabel={TYPE_LABELS[selectedType]}
-            mode={mode}
-            zoningDraft={zoningDraft}
-            lookupAllowed={lookupAllowed}
-            sources={manifest.sources}
-            onClose={() => setExplanationOpen(false)}
-          />
+          <Legend mode={mode} />
+          <button
+            className="map-how-btn"
+            type="button"
+            aria-controls="how-map-generated"
+            aria-expanded={howMapOpen}
+            aria-label="How was this map generated?"
+            title="How was this map generated?"
+            onClick={() => setHowMapOpen(true)}
+          >
+            ?
+          </button>
+          {howMapOpen ? (
+            <HowMapGenerated
+              sources={manifest.sources}
+              onClose={() => setHowMapOpen(false)}
+            />
+          ) : null}
+        </section>
+        {selectedParcel || explanationOpen ? (
+          <aside className="map-explanation" aria-label="Place explanation">
+            {selectedParcel ? (
+              <ParcelCard
+                parcel={selectedParcel}
+                area={areasById.get(selectedParcel.tract)}
+                type={selectedType}
+                typeLabel={TYPE_LABELS[selectedType]}
+                mode={mode}
+                lookupAllowed={lookupAllowed}
+                zoningMatrix={zoningMatrix}
+                zoningDraft={zoningDraft}
+                sources={manifest.sources}
+                onClose={() => setSelectedParcel(null)}
+              />
+            ) : (
+              <WhyThisColor
+                area={selected}
+                placeName={areaLabel(selected)}
+                type={selectedType}
+                typeLabel={TYPE_LABELS[selectedType]}
+                mode={mode}
+                zoningDraft={zoningDraft}
+                lookupAllowed={lookupAllowed}
+                sources={manifest.sources}
+                onClose={() => setExplanationOpen(false)}
+              />
+            )}
+          </aside>
         ) : null}
-      </section>
+      </div>
 
       <section className="workspace-details" aria-label="Detailed analysis">
         <details>
