@@ -14,6 +14,7 @@ import { explainParcel } from '../model/parcelInsight'
 import { STATUS_LABELS, TYPE_LABELS } from '../shared/labels'
 import type { MapMode } from '../shared/mapState'
 import { DistrictCode } from './DistrictCode'
+import { LotBrief } from './LotBrief'
 import { SourceCite } from './SourceCite'
 
 interface ParcelCardProps {
@@ -124,6 +125,13 @@ export function ParcelCard({
       <p className="why-color__verdict">
         {mode === 'need' ? insight.needVerdict : insight.verdict}
       </p>
+
+      <LotBrief
+        parcel={parcel}
+        area={area}
+        type={type}
+        lookupAllowed={lookupAllowed}
+      />
 
       <ol className="why-color__checks">
         {insight.checks.map((check) => {

@@ -2,9 +2,30 @@ import { copyFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
+import { handleLotBriefRequest } from './vite-lot-brief.ts'
 
 const root = dirname(fileURLToPath(import.meta.url))
+
+function lotBriefApi(): Plugin {
+  return {
+    name: 'lot-brief-api',
+    configureServer(server) {
+      const env = {
+        ...loadEnv(server.config.mode, resolve(root, '..'), ''),
+        ...loadEnv(server.config.mode, root, ''),
+      }
+      server.middlewares.use((req, res, next) => {
+        const path = req.url?.split('?')[0]
+        if (path !== '/api/lot-brief') {
+          next()
+          return
+        }
+        void handleLotBriefRequest(req, res, env)
+      })
+    },
+  }
+}
 
 /**
  * MapLibre resolves its tile worker as a sibling of the bundled chunk
@@ -29,7 +50,7 @@ function maplibreWorker(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), maplibreWorker()],
+  plugins: [react(), maplibreWorker(), lotBriefApi()],
   optimizeDeps: {
     // MapLibre ships its own worker module; pre-bundling breaks its URL in Vite 8.
     exclude: ['maplibre-gl'],

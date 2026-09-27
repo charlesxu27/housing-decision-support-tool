@@ -133,13 +133,39 @@ def run_build(paths: Paths = DEFAULT_PATHS, skip_tiles: bool = False, out_overri
     timer.lap(f"boundaries: {len(tracts)} tracts, {len(munis)} municipalities, {len(hoods)} neighborhoods")
 
     # --- parcels ----------------------------------------------------------------
-    parcels = load_parcel_polygons(raw_file(paths, fetch_log, "parcels"))
-    timer.lap(f"parcel polygons: {len(parcels):,}")
-    assessments = load_assessments(raw_file(paths, fetch_log, "assessments"))
-    timer.lap(f"assessments: {len(assessments):,} rows")
-    parcels = join_assessments(parcels, assessments, cfg["fit"])
-    log(f"parcels with assessment match: {int(parcels['has_assessment'].sum()):,}")
-    del assessments
+    parcels_zip = raw_file(paths, fetch_log, "parcels")
+    assessments_path = raw_file(paths, fetch_log, "assessments")
+    if parcels_zip is None:
+        log("parcels unavailable: building tract/Need snapshot without lot Fit counts or tiles")
+        parcels = gpd.GeoDataFrame(
+            {
+                "pin": pd.Series(dtype=object),
+                "use": pd.Series(dtype=object),
+                "lot": pd.Series(dtype="float64"),
+                "bldg": pd.Series(dtype="int64"),
+                "commercial": pd.Series(dtype=bool),
+                "residential": pd.Series(dtype=bool),
+                "finished": pd.Series(dtype="float64"),
+                "has_assessment": pd.Series(dtype=bool),
+                "geometry": gpd.GeoSeries([], crs=WGS84),
+            },
+            crs=WGS84,
+        )
+        availability["parcels"] = False
+        availability["assessments"] = assessments_path is not None
+        timer.lap("parcel polygons: 0 (source not fetched)")
+    else:
+        parcels = load_parcel_polygons(parcels_zip)
+        timer.lap(f"parcel polygons: {len(parcels):,}")
+        if assessments_path is None:
+            raise SystemExit("assessments are required when parcels are present; run fetch first")
+        assessments = load_assessments(assessments_path)
+        timer.lap(f"assessments: {len(assessments):,} rows")
+        parcels = join_assessments(parcels, assessments, cfg["fit"])
+        log(f"parcels with assessment match: {int(parcels['has_assessment'].sum()):,}")
+        del assessments
+        availability["parcels"] = True
+        availability["assessments"] = True
 
     rep = parcels.geometry.representative_point()
     parcels["tract"] = assign_points(rep, tracts, "id")
@@ -341,6 +367,9 @@ def run_build(paths: Paths = DEFAULT_PATHS, skip_tiles: bool = False, out_overri
     timer.lap("geojson exports written")
 
     parcel_tiles = None
+    if not skip_tiles and len(parcels) == 0:
+        log("skipping tiles: no parcels in this build")
+        skip_tiles = True
     if not skip_tiles:
         info = build_parcel_tiles(parcels, paths.processed, out_dir, cfg["tiles"])
         meta_path = out_dir / "tiles" / "parcels" / "metadata.json"
@@ -356,7 +385,8 @@ def run_build(paths: Paths = DEFAULT_PATHS, skip_tiles: bool = False, out_overri
 
     # processed parcel table for debugging / tests (no PII)
     keep = ["pin", "tract", "muni", "hood", "lot", "use", "zone", "bldg", "flood", "floodway", "slope", "mine", "rehab", "trips800", "commercial", "residential"] + [f"f_{t}" for t in TYPE_IDS]
-    parcels[keep].to_parquet(paths.processed / "parcels.parquet", index=False)
+    if len(parcels):
+        parcels[keep].to_parquet(paths.processed / "parcels.parquet", index=False)
 
     manifest = {
         "schemaVersion": SCHEMA_VERSION,

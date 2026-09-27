@@ -61,7 +61,7 @@ npm run build
 
 The app reads a versioned static snapshot produced by `pipeline/` (ACS, county parcels/assessments, hazards, transit, Pittsburgh zoning). The browser does not call public APIs at runtime. Zoning matrix rows without human verification are labeled draft in the UI.
 
-The interface includes a **Grounded Preview** of the planned RAG planning copilot. Today it uses deterministic lexical retrieval, templates, and citations over a small local corpus—no LLM, embeddings, or vector database. The future hosted RAG architecture is documented separately and will preserve the same citation and refusal contract.
+The interface includes a **Grounded Preview** of the planned RAG planning copilot. Today it uses deterministic lexical retrieval, templates, and citations over a small local corpus—no LLM, embeddings, or vector database. Selecting a parcel also shows a **plain-language brief** (demand, transit, equity, climate, cost, size) written from the snapshot Need / Fit / Allowed facts. If `OPENAI_API_KEY` is set in the repo-root `.env` or `web/.env`, Vite’s `/api/lot-brief` endpoint asks the model to rephrase that same card; it does not rescore the lot.
 
 See:
 
