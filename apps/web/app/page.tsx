@@ -2,28 +2,26 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { BOOKMARKS, type Audience, type RecommendResponse } from "@/lib/types";
+import { BOOKMARKS, type RecommendResponse } from "@/lib/types";
 
 const MapCanvas = dynamic(() => import("./components/MapCanvas"), { ssr: false });
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export default function Home() {
-  const [audience, setAudience] = useState<Audience>("city");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<RecommendResponse | null>(null);
   const [flyTo, setFlyTo] = useState<{ lat: number; lon: number } | null>(null);
-  const [lastClick, setLastClick] = useState<{ lat: number; lon: number } | null>(null);
 
-  async function lookup(lat: number, lon: number, aud: Audience = audience) {
+  async function lookup(lat: number, lon: number) {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${API}/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat, lon, audience: aud }),
+        body: JSON.stringify({ lat, lon }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -47,31 +45,22 @@ export default function Home() {
         <h1>What should the city build on this lot?</h1>
         <p className="lede">
           Click a parcel. Public data on zoning, lot size, transit, flood, slopes, mines, and
-          neighborhood housing conditions feed a ranked list of housing types.
+          neighborhood housing conditions feed a ranked list of housing types for city housing staff.
         </p>
 
-        <div className="row">
-          {(["city", "developer", "resident"] as Audience[]).map((a) => (
-            <button
-              key={a}
-              className={audience === a ? "tab active" : "tab"}
-              onClick={() => {
-                setAudience(a);
-                if (lastClick) void lookup(lastClick.lat, lastClick.lon, a);
-              }}
-            >
-              {a === "city" ? "City staff" : a === "developer" ? "Developer" : "Resident"}
-            </button>
-          ))}
-        </div>
-
+        <p className="section-label">Example parcels</p>
+        <p className="lede compact">
+          These three buttons jump the map to a single example lot so you can compare typical
+          conditions — they are not recommendations for the whole neighborhood. East Liberty is a
+          transit-rich mixed-use corridor; South Side Slopes is a steep, house-scale hillside; the
+          Strip District is a riverfront conversion site with flood screening.
+        </p>
         <div className="row">
           {BOOKMARKS.map((b) => (
             <button
               key={b.id}
               className="chip"
               onClick={() => {
-                setLastClick({ lat: b.lat, lon: b.lon });
                 setFlyTo({ lat: b.lat, lon: b.lon });
                 void lookup(b.lat, b.lon);
               }}
@@ -98,7 +87,6 @@ export default function Home() {
         flyTo={flyTo}
         geometry={data?.geometry ?? null}
         onPick={(lat, lon) => {
-          setLastClick({ lat, lon });
           void lookup(lat, lon);
         }}
       />
@@ -106,10 +94,18 @@ export default function Home() {
   );
 }
 
+function nearestTransitLine(t: RecommendResponse["card"]["transit"]): string | null {
+  if (!t.nearest_name || t.nearest_m == null) return null;
+  const kind = t.nearest_kind ? `, ${t.nearest_kind}` : "";
+  const net = t.nearest_network ? ` · ${t.nearest_network}` : "";
+  return `Nearest transit: ${t.nearest_name}${kind}${net} (~${Math.round(t.nearest_m)} m)`;
+}
+
 function Results({ data }: { data: RecommendResponse }) {
   const c = data.card;
   const n = data.narrative;
   const lot = c.parcel.lot_sqft;
+  const transitLine = nearestTransitLine(c.transit);
   return (
     <div>
       <div className="meta">
@@ -121,6 +117,12 @@ function Results({ data }: { data: RecommendResponse }) {
         {c.zoning?.name ? ` (${c.zoning.name})` : ""}
         {lot ? ` · ${Math.round(lot).toLocaleString()} sq ft` : ""}
         {!c.in_city ? " · Outside City of Pittsburgh" : ""}
+        {transitLine ? (
+          <>
+            <br />
+            {transitLine}
+          </>
+        ) : null}
       </div>
       <h2 className="headline">{n.headline}</h2>
       <p className="body">{n.summary}</p>
@@ -155,7 +157,7 @@ function Results({ data }: { data: RecommendResponse }) {
           ["Size", n.size],
         ] as const
       ).map(([title, text]) => (
-        <details key={title} open={title === "Demand" || title === "Climate & hazards"}>
+        <details key={title} open={title === "Demand" || title === "Transit" || title === "Climate & hazards"}>
           <summary>{title}</summary>
           <p>{text}</p>
         </details>

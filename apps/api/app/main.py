@@ -46,7 +46,7 @@ async def recommend(req: RecommendRequest) -> dict:
     if not card.get("ok"):
         raise HTTPException(status_code=404, detail=card.get("error"))
     ranked = score_types(card)
-    narrative, engine = await llm_narrative(card, ranked, req.audience)
+    narrative, engine = await llm_narrative(card, ranked)
     card_out = copy.deepcopy(card)
     geom = (card_out.get("parcel") or {}).pop("geometry", None)
     return {
@@ -55,5 +55,4 @@ async def recommend(req: RecommendRequest) -> dict:
         "ranked": ranked,
         "narrative": narrative.model_dump(),
         "engine": engine,
-        "audience": req.audience,
     }

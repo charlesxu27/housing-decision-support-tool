@@ -22,8 +22,24 @@ def _fmt_pct(v: Any) -> str:
         return "n/a"
 
 
+def _nearest_stop_sentence(transit: dict[str, Any]) -> str:
+    name = transit.get("nearest_name")
+    kind = transit.get("nearest_kind") or "transit stop"
+    network = transit.get("nearest_network")
+    nearest = transit.get("nearest_m")
+    if not name or nearest is None:
+        return ""
+    where = f"The nearest mapped stop is {name}"
+    if kind:
+        where += f", a {kind}"
+    if network:
+        where += f" ({network})"
+    where += f", about {int(nearest)} meters from the parcel."
+    return where
+
+
 def template_narrative(
-    card: dict[str, Any], ranked: list[dict[str, Any]], audience: str
+    card: dict[str, Any], ranked: list[dict[str, Any]]
 ) -> RecommendationText:
     top = ranked[0] if ranked else None
     top2 = ranked[1] if len(ranked) > 1 else None
@@ -36,11 +52,7 @@ def template_narrative(
     address = card.get("address") or "This parcel"
     zcode = zoning.get("code") or "unknown"
 
-    voice = {
-        "city": "For city housing staff, the question is what Pittsburgh should encourage here — not just what pencils for one owner.",
-        "developer": "For an owner or builder, treat this as a screening memo: zoning, lot, hazards, and demand — not a pro forma.",
-        "resident": "For neighbors, this is about what kinds of homes would fit the block and who they might serve.",
-    }[audience]
+    voice = "For city housing staff, the question is what Pittsburgh should encourage here — not just what pencils for one owner."
 
     headline = (
         f"Lean toward {top['label'].lower()} here"
@@ -61,12 +73,12 @@ def template_narrative(
         f"and severe rent burden {_fmt_pct(acs.get('severe_rent_burden_share'))}. "
         "Those are neighborhood signals, not this building's asking price."
     )
-    nearest = transit.get("nearest_m")
+    nearest_txt = _nearest_stop_sentence(transit)
     transit_txt = (
         f"{transit.get('stops_400m')} mapped transit stops within 400m "
-        f"({transit.get('stops_800m')} within 800m"
-        + (f"; nearest about {nearest}m" if nearest is not None else "")
-        + "). Higher-intensity housing is a better public investment where people can ride, walk, or bike."
+        f"({transit.get('stops_800m')} within 800m). "
+        + (nearest_txt + " " if nearest_txt else "")
+        + "Higher-intensity housing is a better public investment where people can ride, walk, or bike."
         if transit.get("stops_400m") is not None
         else "Transit stop counts were unavailable for this click."
     )
@@ -108,11 +120,11 @@ def template_narrative(
 
 
 async def llm_narrative(
-    card: dict[str, Any], ranked: list[dict[str, Any]], audience: str
+    card: dict[str, Any], ranked: list[dict[str, Any]]
 ) -> tuple[RecommendationText, str]:
     key = os.getenv("OPENAI_API_KEY", "").strip()
     if not key:
-        return template_narrative(card, ranked, audience), "template"
+        return template_narrative(card, ranked), "template"
 
     from openai import OpenAI
 
@@ -128,13 +140,7 @@ async def llm_narrative(
         "acs": card.get("acs"),
         "flags": card.get("flags"),
         "ranked": ranked[:8],
-        "audience": audience,
     }
-    audience_instruction = {
-        "city": "Write as a briefing for City of Pittsburgh housing staff: what the city should encourage or allow, with equity and climate in mind.",
-        "developer": "Write as a screening memo for a developer or owner: feasibility, risk, and review burden. Not a bid.",
-        "resident": "Write in plain language for a neighbor: what might get built and how it could affect the block.",
-    }[audience]
 
     def _call():
         client = OpenAI(api_key=key)
@@ -170,12 +176,14 @@ async def llm_narrative(
                 {
                     "role": "system",
                     "content": (
-                        "You recommend housing types for a Pittsburgh parcel. "
+                        "You write a briefing for City of Pittsburgh housing staff: what the city should encourage or allow, "
+                        "with equity and climate in mind. "
                         "Use ONLY the JSON facts provided. Do not invent zoning rules, unit counts, or dollar figures. "
                         "If a field is null, say it is unknown. Cite dataset names (assessments, zoning GIS, FEMA, ACS, OSM). "
                         "Keep each section to 2–4 sentences. headline <= 90 characters. "
-                        "Return a filled recommendation object (string values), never a JSON Schema. "
-                        + audience_instruction
+                        "In the transit section, name the nearest stop (nearest_name), what kind of stop it is "
+                        "(nearest_kind), and the operator/network if present — not only the distance in meters. "
+                        "Return a filled recommendation object (string values), never a JSON Schema."
                     ),
                 },
                 {"role": "user", "content": json.dumps(slim)},
@@ -200,5 +208,5 @@ async def llm_narrative(
         parsed = await asyncio.to_thread(_call)
     except Exception as exc:
         print(f"OpenAI narrative failed ({type(exc).__name__}: {exc}); using template.")
-        return template_narrative(card, ranked, audience), "template"
+        return template_narrative(card, ranked), "template"
     return parsed, "openai"

@@ -94,7 +94,16 @@ async def assemble_feature_card(lat: float, lon: float) -> dict[str, Any]:
             _safe(fetch_hazard_flag(client, UNDERMINED, lon, lat), False),
             _safe(fetch_flood(client, lon, lat), None),
             _safe(fetch_census_acs(client, lon, lat), None),
-            _safe(fetch_transit(client, lon, lat), {"stops_400m": None, "stops_800m": None, "nearest_m": None}),
+            _safe(fetch_transit(client, lon, lat), {
+                "stops_400m": None,
+                "stops_800m": None,
+                "nearest_m": None,
+                "nearest_name": None,
+                "nearest_kind": None,
+                "nearest_network": None,
+                "nearest_lat": None,
+                "nearest_lon": None,
+            }),
             _safe(fetch_city_owned(client, pin), False),
         )
 

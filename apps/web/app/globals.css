@@ -65,6 +65,20 @@ h1 {
   margin: 0 0 1rem;
 }
 
+.lede.compact {
+  font-size: 0.82rem;
+  margin-bottom: 0.55rem;
+}
+
+.section-label {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 700;
+}
+
 .row {
   display: flex;
   flex-wrap: wrap;

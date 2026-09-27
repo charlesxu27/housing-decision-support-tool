@@ -1,5 +1,3 @@
-export type Audience = "city" | "developer" | "resident";
-
 export type RankedType = {
   id: string;
   label: string;
@@ -32,6 +30,9 @@ export type RecommendResponse = {
       stops_400m: number | null;
       stops_800m: number | null;
       nearest_m: number | null;
+      nearest_name: string | null;
+      nearest_kind: string | null;
+      nearest_network: string | null;
     };
     acs: Record<string, unknown> | null;
     flags: Record<string, boolean>;
@@ -51,28 +52,27 @@ export type RecommendResponse = {
     sources_note: string;
   };
   engine: string;
-  audience: Audience;
 };
 
 export const BOOKMARKS = [
   {
     id: "east-liberty",
     label: "East Liberty",
-    hint: "Transit + mixed-use corridor",
+    hint: "Example lot on a transit-rich mixed-use corridor",
     lat: 40.4614,
     lon: -79.9262,
   },
   {
     id: "south-slopes",
     label: "South Side Slopes",
-    hint: "Steep lots, house-scale",
+    hint: "Example hillside lot with steep-slope constraints",
     lat: 40.4236,
     lon: -79.9749,
   },
   {
     id: "strip",
     label: "Strip District",
-    hint: "Floodplain + conversion",
+    hint: "Example riverfront lot for conversion and flood screening",
     lat: 40.453,
     lon: -79.9835,
   },

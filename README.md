@@ -48,9 +48,9 @@ python etl\download.py
 2. WPRDC property assessments (`PARID`).
 3. City zoning, 25% slope, undermined areas; FEMA NFHL flood zone.
 4. Census tract ACS (income, rent, value, vacancy, rent burden).
-5. OSM transit stops within 400m / 800m.
+5. OSM transit stops within 400m / 800m, including the nearest stop name.
 6. Zoning-prefix eligibility table (conservative; not Title 9 legal advice) plus lot, transit, hazard, vacancy, and burden adjustments.
-7. Narrative (OpenAI or template) in city-staff, developer, or resident voice.
+7. Narrative (OpenAI or template) written for city housing staff.
 
 ## Disclaimers
 

@@ -288,6 +288,37 @@ def haversine_m(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
+EMPTY_TRANSIT = {
+    "stops_400m": None,
+    "stops_800m": None,
+    "nearest_m": None,
+    "nearest_name": None,
+    "nearest_kind": None,
+    "nearest_network": None,
+    "nearest_lat": None,
+    "nearest_lon": None,
+}
+
+
+def _stop_kind(tags: dict[str, Any]) -> str:
+    railway = str(tags.get("railway") or "")
+    station = str(tags.get("station") or "")
+    route = str(tags.get("route") or "")
+    if station == "subway" or railway == "subway":
+        return "subway station"
+    if railway in {"station", "halt"} or station == "light_rail" or "light_rail" in route:
+        return "rail station"
+    return "bus stop"
+
+
+def _stop_name(tags: dict[str, Any]) -> str:
+    for key in ("name", "official_name", "ref", "local_ref"):
+        val = str(tags.get(key) or "").strip()
+        if val:
+            return val
+    return "Unnamed stop"
+
+
 async def fetch_transit(
     client: httpx.AsyncClient, lon: float, lat: float
 ) -> dict[str, Any]:
@@ -295,8 +326,10 @@ async def fetch_transit(
     [out:json][timeout:20];
     (
       node["highway"="bus_stop"](around:800,{lat},{lon});
+      node["public_transport"="platform"](around:800,{lat},{lon});
       node["public_transport"="stop_position"](around:800,{lat},{lon});
       node["railway"="station"](around:800,{lat},{lon});
+      node["railway"="halt"](around:800,{lat},{lon});
       node["station"="subway"](around:800,{lat},{lon});
     );
     out body;
@@ -306,15 +339,32 @@ async def fetch_transit(
         r.raise_for_status()
         elements = r.json().get("elements") or []
     except httpx.HTTPError:
-        return {"stops_400m": None, "stops_800m": None, "nearest_m": None}
-    dists = []
+        return dict(EMPTY_TRANSIT)
+    nearest: dict[str, Any] | None = None
+    nearest_d: float | None = None
+    dists: list[float] = []
     for el in elements:
-        if "lon" in el and "lat" in el:
-            dists.append(haversine_m(lon, lat, el["lon"], el["lat"]))
-    if not dists:
-        return {"stops_400m": 0, "stops_800m": 0, "nearest_m": None}
+        if "lon" not in el or "lat" not in el:
+            continue
+        d = haversine_m(lon, lat, el["lon"], el["lat"])
+        dists.append(d)
+        if nearest_d is None or d < nearest_d:
+            nearest_d = d
+            nearest = el
+    if not dists or nearest is None:
+        return {
+            **EMPTY_TRANSIT,
+            "stops_400m": 0,
+            "stops_800m": 0,
+        }
+    tags = nearest.get("tags") or {}
     return {
         "stops_400m": sum(1 for d in dists if d <= 400),
         "stops_800m": sum(1 for d in dists if d <= 800),
-        "nearest_m": round(min(dists)),
+        "nearest_m": round(nearest_d),
+        "nearest_name": _stop_name(tags),
+        "nearest_kind": _stop_kind(tags),
+        "nearest_network": (tags.get("network") or tags.get("operator") or "").strip() or None,
+        "nearest_lat": nearest.get("lat"),
+        "nearest_lon": nearest.get("lon"),
     }
