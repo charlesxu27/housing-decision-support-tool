@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deriveMatchStatus, type MatchInputs } from './match'
+import { deriveMatchStatus, explainMatch, type MatchInputs } from './match'
 
 const viable = {
   need: 'high',
@@ -85,5 +85,79 @@ describe('deriveMatchStatus', () => {
         floodway: false,
       }),
     ).toBe('ready_match')
+  })
+})
+
+describe('explainMatch', () => {
+  const outcomes = (inputs: MatchInputs) =>
+    explainMatch(inputs).checks.map((check) => check.outcome)
+
+  it('passes every check for a ready match', () => {
+    const explanation = explainMatch({ ...viable, allowed: 'by_right' })
+    expect(explanation.status).toBe('ready_match')
+    expect(outcomes({ ...viable, allowed: 'by_right' })).toEqual([
+      'pass',
+      'pass',
+      'pass',
+      'pass',
+    ])
+    expect(explanation.checks.every((check) => check.considered)).toBe(true)
+    expect(explanation.checks.find((check) => check.decisive)?.id).toBe(
+      'allowed',
+    )
+  })
+
+  it('marks checks after a hard gate as not considered', () => {
+    const explanation = explainMatch({
+      need: 'low',
+      fit: 'high',
+      allowed: 'by_right',
+      floodway: false,
+    })
+    expect(explanation.status).toBe('low_priority')
+    expect(
+      explanation.checks.map(({ id, considered, decisive }) => [
+        id,
+        considered,
+        decisive,
+      ]),
+    ).toEqual([
+      ['floodway', true, false],
+      ['need', true, true],
+      ['fit', false, false],
+      ['allowed', false, false],
+    ])
+  })
+
+  it('points insufficient data at the first missing input', () => {
+    const explanation = explainMatch({ need: 'high', fit: 'high', floodway: false })
+    expect(explanation.status).toBe('insufficient_data')
+    expect(explanation.checks.find((check) => check.decisive)?.id).toBe(
+      'allowed',
+    )
+    expect(outcomes({ need: 'high', fit: 'high', floodway: false })[3]).toBe(
+      'unknown',
+    )
+  })
+
+  it('flags approval paths and uncertain bands as cautions', () => {
+    expect(
+      outcomes({
+        need: 'uncertain',
+        fit: 'high',
+        allowed: 'conditional_use',
+        floodway: false,
+      }),
+    ).toEqual(['pass', 'caution', 'pass', 'caution'])
+  })
+
+  it.each<MatchInputs>([
+    { need: 'low', fit: 'low', allowed: 'by_right', floodway: true },
+    { need: 'high', fit: 'low', allowed: 'not_permitted', floodway: false },
+    { need: 'medium', fit: 'medium', allowed: 'unknown', floodway: false },
+    { need: 'high', fit: 'high', allowed: 'special_exception', floodway: false },
+    { need: 'high', fit: 'high', allowed: 'by_right' },
+  ])('always agrees with deriveMatchStatus', (inputs) => {
+    expect(explainMatch(inputs).status).toBe(deriveMatchStatus(inputs))
   })
 })

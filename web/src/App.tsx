@@ -21,6 +21,7 @@ import {
   type ValueWeights,
 } from './panels/ScenarioBuilder'
 import { Toolbar } from './panels/Toolbar'
+import { WhyThisColor } from './panels/WhyThisColor'
 import { DecisionRibbon, MethodStory } from './story'
 import './styles.css'
 
@@ -139,6 +140,7 @@ function App() {
   const [is3d, setIs3d] = useState(() => params.get('dimension') === '3d')
   const [copied, setCopied] = useState(false)
   const [copilotOpen, setCopilotOpen] = useState(false)
+  const [explanationOpen, setExplanationOpen] = useState(false)
   const [mapFocusVersion, setMapFocusVersion] = useState(0)
   const [weights, setWeights] = useState<ValueWeights>({
     protectResidents: BALANCED_WEIGHTS.protectResidents * 50,
@@ -185,7 +187,7 @@ function App() {
     (cell: ViewCell) => {
       const status = statusFor(cell, selectedType)
       const fit = cell.fit[selectedType]
-      return `${TYPE_LABELS[selectedType]}: ${STATUS_LABELS[status]}. ${fit.parcels} illustrative suitable parcels.`
+      return `${TYPE_LABELS[selectedType]}: ${STATUS_LABELS[status]}. ${fit.parcels} illustrative suitable parcels.\nClick to see why.`
     },
     [selectedType],
   )
@@ -316,9 +318,22 @@ function App() {
               getStatus={getStatus}
               getNeed={getNeed}
               getTooltip={getTooltip}
-              onSelect={(cell) => setSelectedH3(cell.h3)}
+              onSelect={(cell) => {
+                setSelectedH3(cell.h3)
+                setExplanationOpen(true)
+              }}
             />
             <Legend mode={mode} />
+            {explanationOpen ? (
+              <WhyThisColor
+                cell={selected}
+                placeName={selected.name}
+                type={selectedType}
+                typeLabel={TYPE_LABELS[selectedType]}
+                mode={mode}
+                onClose={() => setExplanationOpen(false)}
+              />
+            ) : null}
           </section>
 
           <aside className="report-panel">
