@@ -10,7 +10,35 @@ The interface then makes policy and community tradeoffs visible without allowing
 
 ## Run locally
 
-Requirements: Node.js 20+ and npm.
+The web app loads a static snapshot from `web/public/data/` (gitignored). Build that snapshot once with the offline pipeline, then start Vite.
+
+Requirements:
+
+- Node.js 20+ and npm
+- Python 3.11+
+- [`tippecanoe`](https://github.com/felt/tippecanoe) (Homebrew: `brew install tippecanoe`) for parcel vector tiles
+
+### 1. Build the published data snapshot
+
+From the repo root:
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -r pipeline/requirements.txt
+.venv/bin/python -m hdst_pipeline fetch   # downloads into data/raw/ (gitignored)
+.venv/bin/python -m hdst_pipeline build   # writes web/public/data/
+```
+
+`fetch` only needs to run when sources change or `data/raw/` is empty. Re-run `build` after pipeline or config changes. Optional validation:
+
+```sh
+.venv/bin/python -m hdst_pipeline validate
+.venv/bin/pytest pipeline/tests
+```
+
+Details, optional inputs (e.g. HUD CHAS), and exported file contracts are in [`pipeline/README.md`](pipeline/README.md).
+
+### 2. Start the web app
 
 ```sh
 cd web
@@ -31,20 +59,21 @@ npm run build
 
 ## Current MVP status
 
-The first local MVP uses **illustrative fixture data** around Homewood, Wilkinsburg, and nearby Pittsburgh neighborhoods to validate the user experience and deterministic scoring model. It is not yet suitable for real planning decisions. The next data work replaces fixtures with ACS/CHAS household data, county parcel and assessment aggregates, hazard layers, and a human-verified Pittsburgh zoning matrix.
+The app reads a versioned static snapshot produced by `pipeline/` (ACS, county parcels/assessments, hazards, transit, Pittsburgh zoning). The browser does not call public APIs at runtime. Zoning matrix rows without human verification are labeled draft in the UI.
 
 The interface includes a **Grounded Preview** of the planned RAG planning copilot. Today it uses deterministic lexical retrieval, templates, and citations over a small local corpus—no LLM, embeddings, or vector database. The future hosted RAG architecture is documented separately and will preserve the same citation and refusal contract.
 
 See:
 
+- [`pipeline/README.md`](pipeline/README.md) for fetch/build, sources, and export contracts.
 - [`docs/implementation_plan_map_feature.md`](docs/implementation_plan_map_feature.md) for the product and technical plan.
 - [`docs/mvp_tasks.md`](docs/mvp_tasks.md) for the implementation backlog and acceptance criteria.
 - [`docs/rag_chatbot_implementation_plan.md`](docs/rag_chatbot_implementation_plan.md) for the grounded chatbot architecture.
 
 ## Responsible-use notice
 
-This is a decision-support prototype, not legal, zoning, financial, engineering, or permitting advice. Fixture values, fit thresholds, typology mappings, and value presets are assumptions until reviewed and sourced. Always verify zoning with the municipality, site conditions with qualified professionals, ownership and availability, infrastructure capacity, and community priorities before acting.
+This is a decision-support prototype, not legal, zoning, financial, engineering, or permitting advice. Fit thresholds, typology mappings, and value presets are assumptions until reviewed. Always verify zoning with the municipality, site conditions with qualified professionals, ownership and availability, infrastructure capacity, and community priorities before acting.
 
 ## AI and open-source disclosure
 
-Cursor was used to help plan and implement the prototype. The web application uses React, TypeScript, Vite, MapLibre GL, deck.gl, h3-js, Zustand, and Vitest. Source datasets and their vintages will be listed here as real-data pipeline stages replace fixtures.
+Cursor was used to help plan and implement the prototype. The web application uses React, TypeScript, Vite, MapLibre GL, deck.gl, Zustand, and Vitest. Source datasets, vintages, and licenses are pinned in [`pipeline/sources.yaml`](pipeline/sources.yaml) and recorded in the published `manifest.json`.

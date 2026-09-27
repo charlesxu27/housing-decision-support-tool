@@ -103,7 +103,7 @@
   line-height: 1.55;
 }
 
-.planning-copilot__fixture-note {
+.planning-copilot__coverage-note {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0.22rem 0.65rem;
@@ -117,7 +117,7 @@
   line-height: 1.45;
 }
 
-.planning-copilot__fixture-note strong {
+.planning-copilot__coverage-note strong {
   color: #4d3b0a;
 }
 
@@ -437,7 +437,7 @@
     font-size: 0.64rem;
   }
 
-  .planning-copilot__fixture-note {
+  .planning-copilot__coverage-note {
     grid-template-columns: 1fr;
   }
 

@@ -1,40 +1,37 @@
+import { copyFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
-const blockGroupWhere =
-  "STATE='42' AND COUNTY='003' AND TRACT IN ('130700','141200','140400','111500','120900','560400','564800','561400','515200','562300')"
-const blockGroupQuery = new URLSearchParams({
-  where: blockGroupWhere,
-  outFields: 'GEOID,TRACT,BLKGRP,BASENAME',
-  returnGeometry: 'true',
-  outSR: '4326',
-  f: 'geojson',
-}).toString()
+const root = dirname(fileURLToPath(import.meta.url))
+
+/**
+ * MapLibre resolves its tile worker as a sibling of the bundled chunk
+ * (`/assets/maplibre-gl-worker.mjs`). Vite hashes the library into a different
+ * filename and does not emit that sibling, so production street tiles 404.
+ * The worker imports `maplibre-gl-shared.mjs` from the same directory.
+ */
+function maplibreWorker(): Plugin {
+  const files = ['maplibre-gl-worker.mjs', 'maplibre-gl-shared.mjs'] as const
+  return {
+    name: 'maplibre-worker',
+    apply: 'build',
+    closeBundle() {
+      const from = resolve(root, 'node_modules/maplibre-gl/dist')
+      const to = resolve(root, 'dist/assets')
+      for (const file of files) {
+        copyFileSync(resolve(from, file), resolve(to, file))
+      }
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), maplibreWorker()],
   optimizeDeps: {
     // MapLibre ships its own worker module; pre-bundling breaks its URL in Vite 8.
     exclude: ['maplibre-gl'],
-  },
-  server: {
-    // WPRDC does not advertise browser CORS headers on this download.
-    // Proxy it in local development; the production data pipeline will
-    // snapshot the same authoritative geometry into a versioned static file.
-    proxy: {
-      '/wprdc-neighborhoods.geojson': {
-        target: 'https://data.wprdc.org',
-        changeOrigin: true,
-        rewrite: () =>
-          '/dataset/e672f13d-71c4-4a66-8f38-710e75ed80a4/resource/4af8e160-57e9-4ebf-a501-76ca1b42fc99/download/neighborhoods.geojson',
-      },
-      '/census-block-groups.geojson': {
-        target: 'https://tigerweb.geo.census.gov',
-        changeOrigin: true,
-        rewrite: () =>
-          `/arcgis/rest/services/Census2020/Tracts_Blocks/MapServer/1/query?${blockGroupQuery}`,
-      },
-    },
   },
 })

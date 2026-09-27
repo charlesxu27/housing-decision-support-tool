@@ -27,6 +27,8 @@ export interface DecisionRibbonProps {
   fit: DecisionBand
   allowed: DecisionAllowedStatus
   action: DecisionActionStatus
+  /** Replaces the default fit sentence when the ribbon is scoped to one lot. */
+  fitExplanation?: string
   className?: string
 }
 
@@ -151,6 +153,7 @@ export function DecisionRibbon({
   fit,
   allowed,
   action,
+  fitExplanation,
   className,
 }: DecisionRibbonProps) {
   const headingId = useId()
@@ -170,7 +173,7 @@ export function DecisionRibbon({
       label: 'Fit',
       question: 'Could it work here?',
       value: BAND_LABELS[fit],
-      explanation: FIT_EXPLANATIONS[fit],
+      explanation: fitExplanation ?? FIT_EXPLANATIONS[fit],
       tone: bandTone(fit),
     },
     {

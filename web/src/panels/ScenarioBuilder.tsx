@@ -6,23 +6,29 @@ export interface ValueWeights {
   speedToBuild: number
 }
 
+/** Metric values are 0..1 (higher is better) or null when an input is missing. */
 export interface ScenarioScorecard {
   id: string
   label: string
   description: string
   homes: number
-  householdsServed: number
-  landFit: number
-  zoningEase: number
-  displacementSafety: number
-  carbon: number
-  climate: number
-  speed: number
+  householdsServed: number | null
+  landFit: number | null
+  zoningEase: number | null
+  displacementSafety: number | null
+  carbon: number | null
+  climate: number | null
+  speed: number | null
   score: number
+  /** Short factual notes derived from the tract, e.g. "24 homes by right". */
+  facts: string[]
+  /** Reasons a metric is not available. */
+  unavailable: string[]
 }
 
 interface ScenarioBuilderProps {
   placeName: string
+  targetHomes: number
   scenarios: ScenarioScorecard[]
   weights: ValueWeights
   onWeightChange: (key: keyof ValueWeights, value: number) => void
@@ -107,14 +113,25 @@ const LENSES: {
   },
 ]
 
-function metricLabel(value: number) {
+function metricLabel(value: number | null) {
+  if (value == null) return 'Not available'
   if (value >= 0.72) return 'Strong'
   if (value >= 0.46) return 'Mixed'
   return 'Weak'
 }
 
+function Metric({ label, value }: { label: string; value: number | null }) {
+  return (
+    <div className={value == null ? 'metric-unavailable' : undefined}>
+      <dt>{label}</dt>
+      <dd>{metricLabel(value)}</dd>
+    </div>
+  )
+}
+
 export function ScenarioBuilder({
   placeName,
+  targetHomes,
   scenarios,
   weights,
   onWeightChange,
@@ -126,9 +143,13 @@ export function ScenarioBuilder({
       <div className="scenario-intro">
         <div>
           <p className="eyebrow">Compare approaches</p>
-          <h2 id="scenario-heading">40 new homes in {placeName}</h2>
+          <h2 id="scenario-heading">
+            {targetHomes} new homes in {placeName}
+          </h2>
           <p className="muted">
-            Facts stay fixed. Your values change how scenarios rank.
+            Facts come from this tract and stay fixed. Your values change how
+            scenarios rank. Metrics marked not available are excluded from the
+            score.
           </p>
         </div>
         <span className="provenance user-value">Your values</span>
@@ -195,35 +216,31 @@ export function ScenarioBuilder({
               </div>
               <p>{scenario.description}</p>
               <dl>
-                <div>
-                  <dt>Household needs served</dt>
-                  <dd>{metricLabel(scenario.householdsServed)}</dd>
-                </div>
-                <div>
-                  <dt>Land fit</dt>
-                  <dd>{metricLabel(scenario.landFit)}</dd>
-                </div>
-                <div>
-                  <dt>Zoning path</dt>
-                  <dd>{metricLabel(scenario.zoningEase)}</dd>
-                </div>
-                <div>
-                  <dt>Displacement protection</dt>
-                  <dd>{metricLabel(scenario.displacementSafety)}</dd>
-                </div>
-                <div>
-                  <dt>Carbon</dt>
-                  <dd>{metricLabel(scenario.carbon)}</dd>
-                </div>
-                <div>
-                  <dt>Climate safety</dt>
-                  <dd>{metricLabel(scenario.climate)}</dd>
-                </div>
-                <div>
-                  <dt>Speed</dt>
-                  <dd>{metricLabel(scenario.speed)}</dd>
-                </div>
+                <Metric label="Household needs served" value={scenario.householdsServed} />
+                <Metric label="Land fit" value={scenario.landFit} />
+                <Metric label="Zoning path" value={scenario.zoningEase} />
+                <Metric
+                  label="Displacement protection"
+                  value={scenario.displacementSafety}
+                />
+                <Metric label="Carbon (assumption)" value={scenario.carbon} />
+                <Metric label="Climate safety" value={scenario.climate} />
+                <Metric label="Speed" value={scenario.speed} />
               </dl>
+              {scenario.facts.length > 0 ? (
+                <ul className="scenario-facts">
+                  {scenario.facts.map((fact) => (
+                    <li key={fact}>{fact}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {scenario.unavailable.length > 0 ? (
+                <ul className="scenario-facts scenario-facts--unavailable">
+                  {scenario.unavailable.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+              ) : null}
             </article>
           ))}
         </div>
