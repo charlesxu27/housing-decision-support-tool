@@ -26,7 +26,18 @@ export function typeRecord<T>(
 }
 
 type DeepPartialArea = Partial<
-  Omit<AreaRecord, 'need' | 'needScores' | 'fit' | 'allowed' | 'allowedShares' | 'risk' | 'households' | 'stock'>
+  Omit<
+    AreaRecord,
+    | 'need'
+    | 'needScores'
+    | 'fit'
+    | 'allowed'
+    | 'allowedShares'
+    | 'risk'
+    | 'households'
+    | 'stock'
+    | 'opportunity'
+  >
 > & {
   need?: Partial<Record<TypeId, Band>>
   needScores?: Partial<Record<TypeId, number | null>>
@@ -36,6 +47,7 @@ type DeepPartialArea = Partial<
   risk?: Partial<AreaRecord['risk']>
   households?: Partial<AreaRecord['households']>
   stock?: Partial<AreaRecord['stock']>
+  opportunity?: Partial<AreaRecord['opportunity']>
 }
 
 export function buildArea(overrides: DeepPartialArea = {}): AreaRecord {
@@ -98,6 +110,45 @@ export function buildArea(overrides: DeepPartialArea = {}): AreaRecord {
       slopeShare: inCity ? 0.04 : null,
       undermined: 0.3,
       ...overrides.risk,
+    },
+    opportunity: {
+      medianHouseholdIncome: 41_200,
+      countyMedianHouseholdIncome: 78_548,
+      schoolDistrict: 'Pittsburgh School District',
+      schoolDistrictShare: 1,
+      districtProficient: 0.36,
+      mathProficient: 0.71,
+      elaProficient: 0.78,
+      schools: [
+        {
+          level: 'elementary',
+          name: 'Pittsburgh Colfax K-8',
+          mathProficient: 0.71,
+          elaProficient: 0.78,
+          basis: 'attendance_zone',
+          coverage: 1,
+          distanceMiles: null,
+        },
+        {
+          level: 'middle',
+          name: 'Pittsburgh Sterrett 6-8',
+          mathProficient: 0.46,
+          elaProficient: 0.62,
+          basis: 'attendance_zone',
+          coverage: 0.88,
+          distanceMiles: null,
+        },
+        {
+          level: 'high',
+          name: 'Pittsburgh Allderdice HS',
+          mathProficient: 0.54,
+          elaProficient: 0.69,
+          basis: 'attendance_zone',
+          coverage: 1,
+          distanceMiles: null,
+        },
+      ],
+      ...overrides.opportunity,
     },
   }
 }

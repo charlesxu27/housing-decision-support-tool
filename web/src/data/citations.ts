@@ -17,6 +17,9 @@ export const SOURCE_LABELS: Record<string, string> = {
   slopes: 'Steep slopes',
   undermined: 'Undermined areas',
   gtfs: 'PRT transit schedule',
+  future_ready: 'Future Ready PA',
+  school_districts: 'School districts',
+  pps_attendance: 'PPS attendance zones',
 }
 
 /** Source ids behind each map check. Order is the citation order. */

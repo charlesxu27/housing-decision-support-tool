@@ -46,6 +46,9 @@ the assessment file are never read past the raw download.
 | `slopes` | Pittsburgh 25% or Greater Slope | WPRDC resource `5ce91a56-0799-46ea-9585-13fa8db5979e` | FIT (City only) |
 | `undermined` | Undermined Areas | WPRDC resource `e1d96015-818f-46fb-88dd-85c20eacb96c` | FIT flag |
 | `gtfs` | PRT GTFS (latest in GTFS Archive) | WPRDC dataset `gtfs-archive` | Transit access |
+| `future_ready` | Future Ready PA Index, SY 2024-2025 (school assessment file and school fast facts) | `https://futurereadypa.org/Home/DataFiles` | School math and reading scores |
+| `school_districts` | TIGER/Line 2024 unified school districts, PA | `https://www2.census.gov/geo/tiger/TIGER2024/UNSD/tl_2024_42_unsd.zip` | Which district covers each tract |
+| `pps_attendance` | Pittsburgh Public Schools feeder-pattern attendance boundaries (elementary, middle, high) | WPRDC dataset `pittsburgh-public-schools-feeder-pattern-attendance-boundaries` | Which school serves each Pittsburgh tract |
 
 ## Exported files (`web/public/data/`)
 
@@ -115,6 +118,19 @@ missing). Flood/floodway/slope/undermined shares are parcel-intersection shares;
 **Transit.** Weekday trips per stop from GTFS `stop_times` on the busiest
 regular weekday service; `transitTrips800m` sums trips at stops within 800 m of
 the tract centroid (EPSG:32617).
+
+**Opportunity context (sidebar, not a match input).** `opportunity.medianHouseholdIncome`
+is ACS B19013 for the tract; `countyMedianHouseholdIncome` is the same table for
+Allegheny County. Each tract is assigned the TIGER unified school district that
+covers the largest share of its land. `schools` lists the elementary, middle,
+and high school for that tract. Inside Pittsburgh those are the feeder
+attendance zones (largest overlap, at least 5% of the tract). Elsewhere each
+level is the nearest regular school in the district. `districtProficient` is
+the enrollment-weighted mean of each tested school's math and reading shares
+for that whole district. `mathProficient` and `elaProficient` mirror the
+elementary school. Shares are in 0..1; suppressed Future Ready cells stay null.
+They do not change Need, Fit, or Allowed. The sidebar turns those shares into
+letter grades (A at 80% or higher, then B, C, D, and F below 20%).
 
 **Confidence.** Share of the required measures present and unflagged, times
 1.0 in the City and 0.85 outside it (slope layer missing).

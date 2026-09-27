@@ -38,6 +38,7 @@ REQUIRED_AREA_KEYS = [
     "transitTrips800m",
     "parcels",
     "confidence",
+    "opportunity",
 ]
 REQUIRED_SOURCE_KEYS = [
     "id",
@@ -154,6 +155,81 @@ def validate_area(a: dict, city_label: str | None = None) -> list[str]:
                 p.append(f"{aid}: parcels.{k} exceeds parcels.total")
     if not isinstance(a["transitTrips800m"], int) or a["transitTrips800m"] < 0:
         p.append(f"{aid}: transitTrips800m must be a non-negative int")
+    opp = a["opportunity"]
+    if not isinstance(opp, dict):
+        p.append(f"{aid}: opportunity must be an object")
+        return p
+    for key in (
+        "medianHouseholdIncome",
+        "countyMedianHouseholdIncome",
+        "schoolDistrict",
+        "schoolDistrictShare",
+        "districtProficient",
+        "mathProficient",
+        "elaProficient",
+    ):
+        if key not in opp:
+            p.append(f"{aid}: opportunity.{key} missing")
+    income = opp.get("medianHouseholdIncome")
+    county_income = opp.get("countyMedianHouseholdIncome")
+    for key, value in (("medianHouseholdIncome", income), ("countyMedianHouseholdIncome", county_income)):
+        if value is not None and (not _is_num(value) or value < 0):
+            p.append(f"{aid}: opportunity.{key} must be a non-negative number or null")
+    district = opp.get("schoolDistrict")
+    if district is not None and (not isinstance(district, str) or not district.strip()):
+        p.append(f"{aid}: opportunity.schoolDistrict must be a name or null")
+    share = opp.get("schoolDistrictShare")
+    if not _share_ok(share):
+        p.append(f"{aid}: opportunity.schoolDistrictShare must be a share or null")
+    elif share is not None and not district:
+        p.append(f"{aid}: opportunity.schoolDistrictShare set without a district name")
+    for key in ("districtProficient", "mathProficient", "elaProficient"):
+        if not _share_ok(opp.get(key)):
+            p.append(f"{aid}: opportunity.{key} must be a share or null")
+    schools = opp.get("schools")
+    if not isinstance(schools, list):
+        p.append(f"{aid}: opportunity.schools must be a list")
+        return p
+    seen_levels = set()
+    elementary = None
+    for school in schools:
+        if not isinstance(school, dict):
+            p.append(f"{aid}: opportunity.schools entries must be objects")
+            continue
+        level = school.get("level")
+        if level not in ("elementary", "middle", "high"):
+            p.append(f"{aid}: opportunity school level is invalid")
+        elif level in seen_levels:
+            p.append(f"{aid}: opportunity has more than one {level} school")
+        else:
+            seen_levels.add(level)
+        if level == "elementary" and elementary is None:
+            elementary = school
+        name = school.get("name")
+        if not isinstance(name, str) or not name.strip():
+            p.append(f"{aid}: opportunity school name must be text")
+        for key in ("mathProficient", "elaProficient"):
+            if not _share_ok(school.get(key)):
+                p.append(f"{aid}: opportunity school {key} must be a share or null")
+        basis = school.get("basis")
+        if basis not in ("attendance_zone", "nearest_in_district"):
+            p.append(f"{aid}: opportunity school basis is invalid")
+        elif basis == "attendance_zone":
+            if not _share_ok(school.get("coverage")) or school.get("coverage") is None:
+                p.append(f"{aid}: attendance-zone school needs a coverage share")
+            if school.get("distanceMiles") is not None:
+                p.append(f"{aid}: attendance-zone school must not carry a distance")
+        elif basis == "nearest_in_district":
+            if school.get("coverage") is not None:
+                p.append(f"{aid}: nearest-school assignment must not carry coverage")
+            distance = school.get("distanceMiles")
+            if not _is_num(distance) or distance < 0:
+                p.append(f"{aid}: nearest school needs a non-negative distanceMiles")
+    if isinstance(schools, list):
+        for key in ("mathProficient", "elaProficient"):
+            expected = None if not isinstance(elementary, dict) else elementary.get(key)
+            if opp.get(key) != expected:
+                p.append(f"{aid}: opportunity.{key} must match the elementary school")
     return p
 
 

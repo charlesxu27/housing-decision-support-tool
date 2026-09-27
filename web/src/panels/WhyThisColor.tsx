@@ -2,8 +2,9 @@ import { CHECK_SOURCE_IDS } from '../data/citations'
 import type { LookupAllowed } from '../data/load'
 import type { AreaRecord, Band, MatchStatus, SourceRecord, TypeId } from '../data/types'
 import { DistrictCodeList } from './DistrictCode'
+import { OpportunityFacts } from './OpportunityFacts'
 import { SourceCite } from './SourceCite'
-import { NEED_COLORS, STATUS_COLORS } from '../map/colors'
+import { NEED_COLORS, STATUS_COLORS, markInk, rgbCss } from '../map/colors'
 import {
   explainMatch,
   type MatchCheck,
@@ -65,10 +66,6 @@ const OUTCOME_MARKS: Record<MatchCheckOutcome, string> = {
   caution: '△',
   fail: '×',
   unknown: '?',
-}
-
-function rgb([r, g, b]: [number, number, number]): string {
-  return `rgb(${r}, ${g}, ${b})`
 }
 
 function checkResult(
@@ -215,7 +212,7 @@ export function WhyThisColor({
       <header className="why-color__header">
         <span
           className="why-color__swatch"
-          style={{ background: rgb(swatch) }}
+          style={{ background: rgbCss(swatch) }}
           aria-hidden="true"
         />
         <div>
@@ -237,10 +234,13 @@ export function WhyThisColor({
 
       <p className="why-color__verdict">{verdict}</p>
 
+      <OpportunityFacts area={area} sources={sources} />
+
       <ol className="why-color__checks">
         {explanation.checks.map((check) => {
           const highlighted =
             mode === 'need' ? check.id === 'need' : check.decisive
+          const paintsColor = highlighted && check.considered
           return (
             <li
               key={check.id}
@@ -252,9 +252,22 @@ export function WhyThisColor({
               ]
                 .filter(Boolean)
                 .join(' ')}
+              style={
+                paintsColor
+                  ? { boxShadow: `inset 3px 0 0 ${rgbCss(swatch)}`, borderColor: rgbCss(swatch) }
+                  : undefined
+              }
             >
-              <span className="why-color__mark" aria-hidden="true">
-                {OUTCOME_MARKS[check.outcome]}
+              <span
+                className="why-color__mark"
+                style={
+                  paintsColor
+                    ? { background: rgbCss(swatch), color: markInk(swatch) }
+                    : undefined
+                }
+                aria-hidden="true"
+              >
+                {check.considered ? OUTCOME_MARKS[check.outcome] : '–'}
               </span>
               <div>
                 <p className="why-color__check-title">
@@ -285,7 +298,7 @@ export function WhyThisColor({
                 />
                 {!check.considered ? (
                   <p className="why-color__skipped-note">
-                    Not used: an earlier check settled the result.
+                    Not used for this color. An earlier check settled it.
                   </p>
                 ) : null}
               </div>

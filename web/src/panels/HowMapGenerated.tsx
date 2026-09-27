@@ -58,6 +58,7 @@ const GAPS = [
   'Steep-slope exclusions use the City layer only; countywide slope coverage is incomplete.',
   'Sewer and water capacity, parcel ownership, and willingness to sell are not in the data.',
   'Subsidized-unit inventories, vehicle-miles, and service proximity (grocery, clinic) are not fully wired yet.',
+  'Outside Pittsburgh, school scores use the nearest school in the district, not a confirmed attendance zone. Pittsburgh zones are the 2012 feeder patterns. Magnet and charter schools are not included.',
   'Household preferences and community priorities require engagement—this map cannot substitute for that.',
 ] as const
 

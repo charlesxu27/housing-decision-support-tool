@@ -254,3 +254,78 @@ sources:
       kind: wprdc_latest_zip
       dataset: gtfs-archive
       namePattern: "GTFS_\\d+_(\\d{8})_"
+
+  - id: future_ready
+    title: Future Ready PA Index, school year 2024-2025
+    publisher: Pennsylvania Department of Education
+    catalogUrl: https://futurereadypa.org/Home/DataFiles
+    resourceUrl: https://futurereadypa.org/home/getdatafile?id=60
+    geography: Public schools, Pennsylvania
+    vintage: School year 2024-2025
+    license: Public record (Commonwealth of Pennsylvania)
+    notes: >-
+      School-level assessment percents for 2024-25. The tract sidebar names the
+      elementary, middle, and high school assigned to that tract, not a district
+      average. Suppressed cells (IS) stay null. This is not a magnet or charter
+      assignment, and it is not PDE's student-level district composite.
+    fieldsRetained:
+      - AUN
+      - Schl
+      - DistrictName
+      - Name
+      - GradesOffered
+      - Latitude
+      - Longitude
+      - OrganizationTypeCode
+      - Percent proficient or advanced, mathematics/algebra I, all students
+      - Percent proficient or advanced, ELA/literature, all students
+    fetch:
+      kind: http_files
+      files:
+        - url: https://futurereadypa.org/home/getdatafile?id=60
+          filename: future_ready_2024_2025.xlsx
+        - url: https://futurereadypa.org/home/getdatafile?id=58
+          filename: school_fast_facts_2024_2025.xlsx
+
+  - id: school_districts
+    title: TIGER/Line 2024 unified school districts, Pennsylvania
+    publisher: U.S. Census Bureau
+    catalogUrl: https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html
+    resourceUrl: https://www2.census.gov/geo/tiger/TIGER2024/UNSD/tl_2024_42_unsd.zip
+    geography: Unified school districts, Pennsylvania
+    vintage: TIGER/Line 2024
+    license: Public domain (U.S. federal government work)
+    fieldsRetained: [GEOID, NAME, geometry]
+    notes: Each tract is assigned the district that covers the largest share of its land.
+    fetch:
+      kind: http
+      url: https://www2.census.gov/geo/tiger/TIGER2024/UNSD/tl_2024_42_unsd.zip
+      filename: tl_2024_42_unsd.zip
+
+  - id: pps_attendance
+    title: Pittsburgh Public Schools feeder-pattern attendance boundaries
+    publisher: Pittsburgh Public Schools (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/pittsburgh-public-schools-feeder-pattern-attendance-boundaries
+    resourceUrl: https://data.wprdc.org/dataset/d9bf4afc-0fbb-4d12-9c63-7de76965f84e/resource/c02ba4a4-b689-4783-aa43-03dcba03122d/download/elementary.zip
+    geography: Pittsburgh School District feeder zones
+    vintage: Adopted for 2012-13; GIS published 2020
+    license: Public domain
+    fieldsRetained: [SchoolName, geometry]
+    notes: >-
+      Elementary, middle, and high school attendance zones. A Pittsburgh tract
+      is assigned the zone covering the most of its land (at least 5 percent).
+      Renamed schools are joined to the current Future Ready school: University
+      Prep to Milliones, Westinghouse to Academy at Westinghouse, and the North
+      Side high school zone to Perry. These are neighborhood feeder schools, not
+      magnets or charters. Outside Pittsburgh, no county attendance layer is
+      published, so the tract uses the nearest regular school of that level in
+      its district.
+    fetch:
+      kind: http_files
+      files:
+        - url: https://data.wprdc.org/dataset/d9bf4afc-0fbb-4d12-9c63-7de76965f84e/resource/c02ba4a4-b689-4783-aa43-03dcba03122d/download/elementary.zip
+          filename: elementary.zip
+        - url: https://data.wprdc.org/dataset/d9bf4afc-0fbb-4d12-9c63-7de76965f84e/resource/8bd697ec-5a24-4516-bc46-5024080ac8c2/download/middle.zip
+          filename: middle.zip
+        - url: https://data.wprdc.org/dataset/d9bf4afc-0fbb-4d12-9c63-7de76965f84e/resource/8b0533ad-0873-4903-baf4-c9a1eec521c6/download/high.zip
+          filename: high.zip

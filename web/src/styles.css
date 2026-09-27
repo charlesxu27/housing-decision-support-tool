@@ -517,6 +517,11 @@ input:focus-visible {
   background: #eaebea;
 }
 
+.why-color__check--skipped .why-color__mark {
+  color: #5e6360;
+  background: #eaebea;
+}
+
 .why-color__check-title {
   display: flex;
   flex-wrap: wrap;
@@ -1048,11 +1053,6 @@ input:focus-visible {
   pointer-events: auto;
 }
 
-.why-color:has(.source-cite__hover:hover),
-.why-color:has(.source-cite__hover:focus-within) {
-  overflow: visible;
-}
-
 @supports (top: anchor(bottom)) {
   .source-cite__menu {
     position: fixed;
@@ -1163,27 +1163,39 @@ input:focus-visible {
   height: 7px;
   margin-right: 5px;
   border-radius: 50%;
-  background: #adb5b0;
+  background: #7c7d82;
 }
 
 .status-ready_match {
-  background: var(--green);
+  background: #0d9488;
 }
 
 .status-needs_approval {
-  background: var(--gold);
+  background: #f0a823;
 }
 
 .status-blocked_by_zoning {
-  background: var(--purple);
+  background: #7e57c2;
 }
 
 .status-needed_but_hard {
-  background: var(--blue);
+  background: #347dbc;
+}
+
+.status-low_priority {
+  background: #adb5bd;
+}
+
+.status-zoning_unknown {
+  background: #5c656e;
 }
 
 .status-not_recommended {
-  background: var(--red);
+  background: #c23f3f;
+}
+
+.status-insufficient_data {
+  background: #a88462;
 }
 
 .unknowns-card ul {
@@ -2898,6 +2910,166 @@ summary:focus-visible {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.opportunity-facts {
+  margin: 10px 0 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(217, 222, 215, 0.95);
+  border-radius: 8px;
+  background: #f6f7f2;
+}
+
+.opportunity-facts dl {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.opportunity-facts dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.opportunity-facts dt {
+  color: #5d675f;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.opportunity-facts dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.opportunity-facts dd small {
+  display: block;
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.opportunity-facts__about {
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1e654f;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.opportunity-facts__about:hover,
+.opportunity-facts__about:focus-visible {
+  color: var(--green-dark);
+  outline: none;
+}
+
+.opportunity-grade {
+  display: inline-block;
+  min-width: 1.15em;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 800;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.opportunity-grade--a {
+  color: #1e654f;
+  background: #e5f0eb;
+}
+
+.opportunity-grade--b {
+  color: #275a85;
+  background: #e6f0f8;
+}
+
+.opportunity-grade--c {
+  color: #6a5412;
+  background: #f8f1dc;
+}
+
+.opportunity-grade--d {
+  color: #8a4b12;
+  background: #f8efe4;
+}
+
+.opportunity-grade--f {
+  color: #8d2f2f;
+  background: #f8e8e6;
+}
+
+.opportunity-tip {
+  position: fixed;
+  z-index: 40;
+  width: min(280px, calc(100vw - 24px));
+  padding: 8px 10px;
+  border: 1px solid rgba(217, 222, 215, 0.95);
+  border-radius: 8px;
+  background: rgba(255, 254, 250, 0.98);
+  box-shadow: 0 8px 22px rgba(24, 37, 31, 0.18);
+  color: #3d4741;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: left;
+  transform: translate(-50%, calc(-100% - 8px));
+  pointer-events: none;
+}
+
+.opportunity-tip--below {
+  transform: translate(-50%, 8px);
+}
+
+.opportunity-facts__levels {
+  margin-top: 8px;
+}
+
+.opportunity-facts__levels summary {
+  cursor: pointer;
+  color: #1e654f;
+  font-size: 11px;
+  font-weight: 700;
+  list-style: none;
+}
+
+.opportunity-facts__levels summary::-webkit-details-marker {
+  display: none;
+}
+
+.opportunity-facts__levels summary::before {
+  content: '▸ ';
+}
+
+.opportunity-facts__levels[open] summary::before {
+  content: '▾ ';
+}
+
+.opportunity-facts__levels dl {
+  margin-top: 8px;
+}
+
+.opportunity-facts dl > div.opportunity-facts__school {
+  display: grid;
+  gap: 1px;
+}
+
+.opportunity-facts .opportunity-facts__school dd {
+  text-align: left;
+  font-weight: 650;
+  line-height: 1.35;
 }
 
 /* Parcel detail card */

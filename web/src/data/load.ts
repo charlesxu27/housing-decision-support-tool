@@ -117,6 +117,26 @@ const areaRecordSchema: z.ZodType<AreaRecord> = z.object({
   risk: areaRisk,
   carbon: z.object({ vmtPerHh: nullableNumber }),
   transitTrips800m: z.number(),
+  opportunity: z.object({
+    medianHouseholdIncome: nullableNumber,
+    countyMedianHouseholdIncome: nullableNumber,
+    schoolDistrict: z.string().nullable(),
+    schoolDistrictShare: nullableNumber,
+    districtProficient: nullableNumber,
+    mathProficient: nullableNumber,
+    elaProficient: nullableNumber,
+    schools: z.array(
+      z.object({
+        level: z.enum(['elementary', 'middle', 'high']),
+        name: z.string().min(1),
+        mathProficient: nullableNumber,
+        elaProficient: nullableNumber,
+        basis: z.enum(['attendance_zone', 'nearest_in_district']),
+        coverage: nullableNumber,
+        distanceMiles: nullableNumber,
+      }),
+    ),
+  }),
   parcels: z.object({
     total: z.number(),
     residential: z.number(),

@@ -199,6 +199,18 @@
   border-color: #d6c7eb;
 }
 
+.story-tone--danger {
+  color: #8d2f2f;
+  background: #f8dddd;
+  border-color: #e7b6b4;
+}
+
+.story-tone--missing {
+  color: #6d4e32;
+  background: #f6eee4;
+  border-color: #e2d0bc;
+}
+
 .story-tone--quiet,
 .story-tone--unknown {
   color: #555f59;

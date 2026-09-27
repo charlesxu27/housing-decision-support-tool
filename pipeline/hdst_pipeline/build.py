@@ -27,6 +27,7 @@ from .fit import parcel_fit_flags, tract_fit
 from .geography import assign_points, intersects_any, load_municipalities, load_neighborhoods, load_tracts
 from .hazards import dissolve_flood_for_overlay, load_flood, load_polygon_layer, overlay_polygons
 from .need import compute_need
+from .opportunity import load_school_assignments
 from .parcels import join_assessments, load_assessments, load_parcel_polygons, load_rehab_flags
 from .paths import DEFAULT_PATHS, TYPE_IDS, WGS84, Paths, config_hash, load_model_config, load_sources, read_fetch_log
 from .sources import utcnow
@@ -303,9 +304,37 @@ def run_build(paths: Paths = DEFAULT_PATHS, skip_tiles: bool = False, out_overri
     availability["chas"] = bool(fetch_log.get("chas", {}).get("available"))
     timer.lap(f"need: {len(acs)} tracts with ACS rows; county median income {county.get('median_income')}")
 
+    # --- opportunity (income is joined inside the area record from ACS) ----------
+    school_by_tract, school_status = load_school_assignments(tracts, paths, fetch_log)
+    availability["future_ready"] = school_status["future_ready"]
+    availability["school_districts"] = school_status["school_districts"]
+    availability["pps_attendance"] = school_status.get("pps_attendance", False)
+    scored = sum(1 for row in school_by_tract.values() if row.get("schools"))
+    timer.lap(
+        "opportunity: "
+        + (
+            f"schools on {scored} tracts"
+            if school_by_tract
+            else "school district source not in this build"
+        )
+    )
+
     # --- records ------------------------------------------------------------------
     areas = build_area_records(
-        tracts, parcels, flags, acs, need, fit, allowed, allowed_shares, zoning_districts, tract_trips, county, cfg, munis
+        tracts,
+        parcels,
+        flags,
+        acs,
+        need,
+        fit,
+        allowed,
+        allowed_shares,
+        zoning_districts,
+        tract_trips,
+        county,
+        cfg,
+        munis,
+        school_by_tract,
     )
     tract_muni = {a["id"]: a["muni"] for a in areas}
     summaries = build_summaries(munis, "municipality", parcels, "muni", city, tract_muni) + build_summaries(

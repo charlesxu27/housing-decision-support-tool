@@ -10,6 +10,7 @@ import pandas as pd
 
 from .acs import HOUSEHOLD_KEYS, STOCK_KEYS
 from .geography import centroid_lonlat
+from .opportunity import opportunity_record
 from .paths import TYPE_IDS
 
 
@@ -58,6 +59,7 @@ def build_area_records(
     county: dict,
     cfg: dict,
     munis_gdf: gpd.GeoDataFrame,
+    school_by_tract: dict | None = None,
 ) -> list[dict]:
     city = cfg["county"]["cityLabel"]
     w_disp = cfg["risk"]["displacement"]
@@ -127,7 +129,8 @@ def build_area_records(
         need_scores = {t: (_num(need_row[f"score_{t}"]) if need_row is not None else None) for t in TYPE_IDS}
 
         income = measure("median_income")
-        disp = displacement_index(households["renter_share"], households["cost_burdened_renters"], income, county.get("median_income"), w_disp)
+        county_income = county.get("median_income")
+        disp = displacement_index(households["renter_share"], households["cost_burdened_renters"], income, county_income, w_disp)
 
         present = sum(1 for k in required if (households.get(k) if k in households else stock.get(k)) is not None and k not in flags)
         confidence = (present / len(required)) * (1.0 if in_city else outside_factor)
@@ -166,6 +169,7 @@ def build_area_records(
                 "transitTrips800m": int(tract_trips.get(tid, 0)),
                 "parcels": counts,
                 "confidence": _num(confidence, 4),
+                "opportunity": opportunity_record(income, county_income, (school_by_tract or {}).get(tid)),
             }
         )
     return records
@@ -219,6 +223,9 @@ def null_coverage(areas: list[dict]) -> dict[str, float]:
         "risk.slopeShare": lambda a: a["risk"]["slopeShare"],
         "risk.undermined": lambda a: a["risk"]["undermined"],
         "carbon.vmtPerHh": lambda a: a["carbon"]["vmtPerHh"],
+        "opportunity.medianHouseholdIncome": lambda a: a.get("opportunity", {}).get("medianHouseholdIncome"),
+        "opportunity.mathProficient": lambda a: a.get("opportunity", {}).get("mathProficient"),
+        "opportunity.elaProficient": lambda a: a.get("opportunity", {}).get("elaProficient"),
     }
     out = {k: round(sum(1 for a in areas if f(a) is None) / n, 4) for k, f in keys.items()}
     for t in TYPE_IDS:

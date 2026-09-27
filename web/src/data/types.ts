@@ -106,6 +106,26 @@ export interface AreaParcelCounts {
   rehabCandidates: number
 }
 
+export type SchoolLevel = 'elementary' | 'middle' | 'high'
+
+export type SchoolAssignment = 'attendance_zone' | 'nearest_in_district'
+
+/** A public school whose score is shown for this tract. */
+export interface TractSchool {
+  level: SchoolLevel
+  name: string
+  /** Share proficient or advanced in math/algebra, 0..1. Null when suppressed. */
+  mathProficient: number | null
+  /** Share proficient or advanced in ELA/literature, 0..1. Null when suppressed. */
+  elaProficient: number | null
+  /** Attendance zone inside Pittsburgh; nearest school of that level in other districts. */
+  basis: SchoolAssignment
+  /** Share of the tract inside this attendance zone. Null for a nearest-school assignment. */
+  coverage: number | null
+  /** Miles from the tract centroid to the school. Null for an attendance-zone assignment. */
+  distanceMiles: number | null
+}
+
 /**
  * One Census tract in Allegheny County. Tracts are the analysis unit because
  * ACS household measures are published there; parcel-derived Fit and Allowed
@@ -148,6 +168,34 @@ export interface AreaRecord {
   }
   /** Weekday scheduled transit trips at stops within 800 m of the tract centroid. */
   transitTrips800m: number
+  /**
+   * Place context for the map sidebar. These facts do not change Need, Fit,
+   * or Allowed. School scores are the assigned school's result, not a district average.
+   */
+  opportunity: {
+    /** ACS B19013 median household income in dollars. Null when unpublished. */
+    medianHouseholdIncome: number | null
+    /** Same ACS median for Allegheny County. */
+    countyMedianHouseholdIncome: number | null
+    /** Unified school district covering the largest share of the tract. */
+    schoolDistrict: string | null
+    /** Share of the tract's land inside `schoolDistrict`. */
+    schoolDistrictShare: number | null
+    /**
+     * Enrollment-weighted mean of the district's school math and reading shares, 0..1.
+     * The same value for every tract in the district.
+     */
+    districtProficient: number | null
+    /**
+     * Elementary school's share proficient or advanced in math/algebra, 0..1.
+     * Mirrors `schools`. Null when that school did not publish a percent.
+     */
+    mathProficient: number | null
+    /** Elementary school's share proficient or advanced in ELA/literature, 0..1. */
+    elaProficient: number | null
+    /** Elementary, middle, and high school assigned to this tract. */
+    schools: TractSchool[]
+  }
   parcels: AreaParcelCounts
   /** 0..1 share of required inputs present and reliable. */
   confidence: number

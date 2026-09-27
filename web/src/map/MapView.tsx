@@ -38,7 +38,7 @@ import {
 } from '../model/area'
 import { STATUS_LABELS, TYPE_LABELS } from '../shared/labels'
 import type { MapMode } from '../shared/mapState'
-import { NEED_COLORS, STATUS_COLORS } from './colors'
+import { EMPTY_TRACT_RGB, NEED_COLORS, STATUS_COLORS } from './colors'
 import { useGeoJson } from './useGeoJson'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -72,7 +72,7 @@ const MAP_STYLE =
 export const SUMMARY_MAX_ZOOM = 11.5
 /** From here parcels are drawn from the vector tiles; tracts become outlines. */
 export const PARCEL_MIN_ZOOM = 14
-const NO_DATA: Rgba = [205, 211, 207, 60]
+const NO_DATA: Rgba = [...EMPTY_TRACT_RGB, 220]
 const CITY_NAMES = new Set(['pittsburgh', 'city of pittsburgh'])
 
 type OverlayId = 'flood' | 'transit' | 'zoning'
@@ -106,10 +106,12 @@ function asFeatureCollection<P extends Record<string, unknown>>(
 
 function paletteColor(value: string | null, mode: MapMode, alpha: number): Rgba {
   if (value == null) return NO_DATA
-  const palette = mode === 'match' ? STATUS_COLORS : NEED_COLORS
+  const palette: Record<string, [number, number, number]> =
+    mode === 'match' ? STATUS_COLORS : NEED_COLORS
   const fallback =
-    mode === 'match' ? STATUS_COLORS.insufficient_data : NEED_COLORS.uncertain
-  return [...(palette[value] ?? fallback), alpha]
+    mode === 'match' ? STATUS_COLORS.insufficient_data : NEED_COLORS.uncertain!
+  const [r, g, b] = palette[value] ?? fallback
+  return [r, g, b, alpha]
 }
 
 function isCity(properties: SummaryAreaProperties): boolean {

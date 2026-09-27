@@ -5,6 +5,7 @@ import { areaPlace } from '../model/area'
 import { pct } from '../shared/format'
 import { STATUS_LABELS } from '../shared/labels'
 import { DistrictCodeList } from './DistrictCode'
+import { OpportunityFacts } from './OpportunityFacts'
 import { SourceCatalog } from './SourceCatalog'
 import { SourceCite } from './SourceCite'
 
@@ -135,6 +136,8 @@ export function PlaceReport({
           <span className="data-vintage-pill">Data: {dataVintage}</span>
         </div>
       </div>
+
+      <OpportunityFacts area={area} sources={sources} />
 
       <div className="insight-card">
         <p className="eyebrow">Who lives here vs. what exists</p>

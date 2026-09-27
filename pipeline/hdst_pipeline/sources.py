@@ -123,6 +123,14 @@ def fetch_http(src: dict[str, Any], out_dir: Path, session: requests.Session) ->
     return rec
 
 
+def fetch_http_files(src: dict[str, Any], out_dir: Path, session: requests.Session) -> dict[str, Any]:
+    files, urls = [], []
+    for item in src["fetch"]["files"]:
+        files.append(download(item["url"], out_dir / item["filename"], session))
+        urls.append(item["url"])
+    return _record(files, urls)
+
+
 def fetch_acs_tables(src: dict[str, Any], out_dir: Path, session: requests.Session) -> dict[str, Any]:
     f = src["fetch"]
     files, urls = [], []
@@ -248,6 +256,7 @@ def fetch_local_optional(src: dict[str, Any], out_dir: Path, session: requests.S
 
 FETCHERS = {
     "http": fetch_http,
+    "http_files": fetch_http_files,
     "acs_tables": fetch_acs_tables,
     "arcgis_query": fetch_arcgis_query,
     "wprdc_latest_zip": fetch_wprdc_latest_zip,

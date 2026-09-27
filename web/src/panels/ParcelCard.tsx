@@ -8,13 +8,14 @@ import {
   type TypeId,
   type ZoningMatrix,
 } from '../data/types'
-import { NEED_COLORS, STATUS_COLORS } from '../map/colors'
+import { NEED_COLORS, STATUS_COLORS, markInk, rgbCss } from '../map/colors'
 import { parcelStatus } from '../model/area'
 import { explainParcel } from '../model/parcelInsight'
 import { STATUS_LABELS, TYPE_LABELS } from '../shared/labels'
 import type { MapMode } from '../shared/mapState'
 import { DistrictCode } from './DistrictCode'
 import { LotBrief } from './LotBrief'
+import { OpportunityFacts } from './OpportunityFacts'
 import { SourceCite } from './SourceCite'
 
 interface ParcelCardProps {
@@ -60,10 +61,6 @@ function flag(value: -1 | 0 | 1): string {
   return value === 1 ? 'yes' : 'no'
 }
 
-function rgb([r, g, b]: [number, number, number]): string {
-  return `rgb(${r}, ${g}, ${b})`
-}
-
 export function ParcelCard({
   parcel,
   area,
@@ -99,7 +96,7 @@ export function ParcelCard({
       <header className="why-color__header">
         <span
           className="why-color__swatch"
-          style={{ background: rgb(swatch) }}
+          style={{ background: rgbCss(swatch) }}
           aria-hidden="true"
         />
         <div>
@@ -126,6 +123,8 @@ export function ParcelCard({
         {mode === 'need' ? insight.needVerdict : insight.verdict}
       </p>
 
+      <OpportunityFacts area={area} sources={sources} />
+
       <LotBrief
         parcel={parcel}
         area={area}
@@ -136,6 +135,7 @@ export function ParcelCard({
       <ol className="why-color__checks">
         {insight.checks.map((check) => {
           const highlighted = mode === 'need' ? check.id === 'need' : check.decisive
+          const paintsColor = highlighted && check.considered
           return (
             <li
               key={check.id}
@@ -147,9 +147,22 @@ export function ParcelCard({
               ]
                 .filter(Boolean)
                 .join(' ')}
+              style={
+                paintsColor
+                  ? { boxShadow: `inset 3px 0 0 ${rgbCss(swatch)}`, borderColor: rgbCss(swatch) }
+                  : undefined
+              }
             >
-              <span className="why-color__mark" aria-hidden="true">
-                {OUTCOME_MARKS[check.outcome]}
+              <span
+                className="why-color__mark"
+                style={
+                  paintsColor
+                    ? { background: rgbCss(swatch), color: markInk(swatch) }
+                    : undefined
+                }
+                aria-hidden="true"
+              >
+                {check.considered ? OUTCOME_MARKS[check.outcome] : '–'}
               </span>
               <div>
                 <p className="why-color__check-title">
@@ -181,7 +194,7 @@ export function ParcelCard({
                 />
                 {!check.considered ? (
                   <p className="why-color__skipped-note">
-                    Not used: an earlier check settled the color.
+                    Not used for this color. An earlier check settled it.
                   </p>
                 ) : null}
               </div>

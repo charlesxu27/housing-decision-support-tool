@@ -1,4 +1,5 @@
-import { useId } from 'react'
+import { useId, type CSSProperties } from 'react'
+import { STATUS_COLORS, rgbCss } from '../map/colors'
 import './story.css'
 
 export type DecisionBand = 'high' | 'medium' | 'low' | 'uncertain'
@@ -130,12 +131,12 @@ const ACTION_CONTENT: Record<
   not_recommended: {
     label: 'Do not advance',
     explanation: 'A hard constraint makes this path unsuitable.',
-    tone: 'blocked',
+    tone: 'danger',
   },
   insufficient_data: {
     label: 'Fill the evidence gap',
     explanation: 'More reliable facts are needed before choosing a path.',
-    tone: 'unknown',
+    tone: 'missing',
   },
 }
 
@@ -214,6 +215,11 @@ export function DecisionRibbon({
           <li
             className={`story-ribbon__step story-ribbon__step--${step.key}`}
             key={step.key}
+            style={
+              step.key === 'action'
+                ? ({ '--story-accent': rgbCss(STATUS_COLORS[action]) } as CSSProperties)
+                : undefined
+            }
           >
             <div className="story-ribbon__step-heading">
               <span className="story-ribbon__number" aria-hidden="true">

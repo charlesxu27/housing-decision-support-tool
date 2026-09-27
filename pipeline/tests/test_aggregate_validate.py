@@ -38,6 +38,16 @@ def _area(aid="42003010301", muni="Pittsburgh", in_city=True, total=3):
         "transitTrips800m": 12,
         "parcels": {"total": total, "residential": 2, "vacant": 1, "rehabCandidates": 0},
         "confidence": 0.9,
+        "opportunity": {
+            "medianHouseholdIncome": 61035,
+            "countyMedianHouseholdIncome": 78548,
+            "schoolDistrict": "Pittsburgh School District",
+            "schoolDistrictShare": 1.0,
+            "districtProficient": None,
+            "mathProficient": None,
+            "elaProficient": None,
+            "schools": [],
+        },
     }
 
 
@@ -112,10 +122,34 @@ def test_boundary_tract_outside_city_drops_spillover_zoning(model_cfg):
     assert records[0]["muni"] == "Green Tree Borough"
     assert records[0]["zoningDistricts"] == []
     assert records[0]["neighborhood"] is None
+    assert records[0]["opportunity"]["medianHouseholdIncome"] is None
+    assert records[0]["opportunity"]["countyMedianHouseholdIncome"] == 78548
+    assert records[0]["opportunity"]["schoolDistrict"] is None
+    assert records[0]["opportunity"]["schools"] == []
+    assert records[0]["opportunity"]["mathProficient"] is None
 
 
 def test_valid_snapshot_passes():
     assert validate_area_metrics(_snapshot(), "Pittsburgh") == []
+
+
+def test_school_basis_must_name_the_assignment():
+    snapshot = _snapshot()
+    snapshot["areas"][0]["opportunity"]["schools"] = [
+        {
+            "level": "elementary",
+            "name": "Pittsburgh Colfax K-8",
+            "mathProficient": 0.5,
+            "elaProficient": 0.6,
+            "basis": "district_average",
+            "coverage": 1,
+            "distanceMiles": None,
+        }
+    ]
+    snapshot["areas"][0]["opportunity"]["mathProficient"] = 0.5
+    snapshot["areas"][0]["opportunity"]["elaProficient"] = 0.6
+    problems = validate_area_metrics(snapshot, "Pittsburgh")
+    assert any("basis" in problem for problem in problems)
 
 
 def test_duplicate_ids_rejected():
