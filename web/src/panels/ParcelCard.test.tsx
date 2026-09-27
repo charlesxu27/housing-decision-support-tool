@@ -27,7 +27,7 @@ describe('ParcelCard', () => {
       />,
     )
 
-    expect(screen.getByRole('heading', { name: /Needed but hard/ })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 3, name: /Needed but hard/ })).toBeTruthy()
     expect(screen.getByText(/under the 5,000 sq ft minimum for an ADU/)).toBeTruthy()
     expect(screen.getByText(/This lot:/)).toBeTruthy()
     expect(screen.getAllByRole('button', { name: /R1D-L, Single-unit detached/ }).length).toBeGreaterThan(0)

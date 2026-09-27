@@ -124,7 +124,7 @@ function covered(value: -1 | 0 | 1): string {
   return value === 1 ? 'yes' : 'no'
 }
 
-function useLabel(parcel: ParcelTileProperties): string {
+function landUseLabel(parcel: ParcelTileProperties): string {
   return USE_LABELS[parcel.use] ?? parcel.use
 }
 
@@ -136,7 +136,7 @@ function fitBlocker(parcel: ParcelTileProperties, type: TypeId): string {
   switch (type) {
     case 'adu':
       if (parcel.use !== 'sf_detached') {
-        return `ADUs are screened on detached single-family lots. This lot is ${useLabel(parcel).toLowerCase()}.`
+        return `ADUs are screened on detached single-family lots. This lot is ${landUseLabel(parcel).toLowerCase()}.`
       }
       if (parcel.bldg !== 1) {
         return 'The assessment shows no building. An ADU screen requires an existing detached house.'
@@ -152,7 +152,7 @@ function fitBlocker(parcel: ParcelTileProperties, type: TypeId): string {
           : 'Vacant lot meets the size minimum, but the recorded fit flag fails.'
       }
       if (parcel.use !== 'sf_detached') {
-        return `A duplex is screened on a vacant lot or a detached house. This lot is ${useLabel(parcel).toLowerCase()}.`
+        return `A duplex is screened on a vacant lot or a detached house. This lot is ${landUseLabel(parcel).toLowerCase()}.`
       }
       if (parcel.bldg !== 1) {
         return 'No building is recorded, so this cannot be a house conversion, and the lot is not vacant.'
@@ -163,7 +163,7 @@ function fitBlocker(parcel: ParcelTileProperties, type: TypeId): string {
       return `Lot size and use would allow a conversion, but finished living area is under ${LOT.duplexFinished.toLocaleString()} sq ft. That area was applied at build time and is not stored on the lot.`
     case 'townhome':
       if (parcel.use !== 'vacant') {
-        return `Townhomes are screened on vacant lots. This lot is ${useLabel(parcel).toLowerCase()}.`
+        return `Townhomes are screened on vacant lots. This lot is ${landUseLabel(parcel).toLowerCase()}.`
       }
       if (parcel.lot < LOT.townhome) {
         return `Vacant lot is ${sqft(parcel.lot)}, under the ${LOT.townhome.toLocaleString()} sq ft minimum for townhomes.`
@@ -171,7 +171,7 @@ function fitBlocker(parcel: ParcelTileProperties, type: TypeId): string {
       return 'Vacant lot meets the size minimum, but the recorded fit flag fails.'
     case 'detached_sf':
       if (parcel.use !== 'vacant') {
-        return `Detached single-family is screened on vacant lots. This lot is ${useLabel(parcel).toLowerCase()}.`
+        return `Detached single-family is screened on vacant lots. This lot is ${landUseLabel(parcel).toLowerCase()}.`
       }
       if (parcel.lot < LOT.detached) {
         return `Vacant lot is ${sqft(parcel.lot)}, under the ${LOT.detached.toLocaleString()} sq ft minimum.`
@@ -204,7 +204,7 @@ function apartmentBlocker(
   const max = type === 'small_apartment' ? LOT.smallMax : null
   const trips = type === 'small_apartment' ? TRIPS.small : TRIPS.large
   if (parcel.use !== 'vacant' && parcel.use !== 'other') {
-    return `Apartments are screened on vacant or commercial lots. This lot is ${useLabel(parcel).toLowerCase()}.`
+    return `Apartments are screened on vacant or commercial lots. This lot is ${landUseLabel(parcel).toLowerCase()}.`
   }
   if (parcel.lot < min) {
     return `The lot is ${sqft(parcel.lot)}, under the ${min.toLocaleString()} sq ft minimum.`
@@ -221,7 +221,7 @@ function fitMetrics(parcel: ParcelTileProperties, type: TypeId): string[] {
     passes
       ? 'This lot passed the fit rule when the snapshot was built.'
       : fitBlocker(parcel, type),
-    `Use: ${useLabel(parcel)}. Lot: ${sqft(parcel.lot)}. Building: ${parcel.bldg === 1 ? 'yes' : 'no'}.`,
+    `Use: ${landUseLabel(parcel)}. Lot: ${sqft(parcel.lot)}. Building: ${parcel.bldg === 1 ? 'yes' : 'no'}.`,
     `Steep slope: ${covered(parcel.slope)}. Undermined: ${covered(parcel.mine)}. Rehab candidate: ${covered(parcel.rehab)}.`,
     FIT_RULES[type],
   ]

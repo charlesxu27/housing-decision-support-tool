@@ -16,6 +16,33 @@ const SECTIONS = [
   ['Size', 'size'],
 ] as const
 
+export function LotBriefBanner({
+  engine,
+  pending,
+  model,
+}: {
+  engine: 'template' | 'openai'
+  pending: boolean
+  model: string
+}) {
+  if (engine === 'openai') {
+    return (
+      <p className="lot-brief__ai" role="note">
+        <strong>AI-generated summary.</strong> {model} rewrote this brief from the snapshot
+        facts. It does not change the match color, the scores, or the zoning result. If this
+        wording and the checks above disagree, trust the checks.
+      </p>
+    )
+  }
+  return (
+    <p className="lot-brief__engine">
+      {pending
+        ? 'Snapshot wording for now. An AI rewrite is loading…'
+        : 'Written from the snapshot facts. Not AI-generated.'}
+    </p>
+  )
+}
+
 interface LotBriefProps {
   parcel: ParcelTileProperties
   area: AreaRecord | undefined
@@ -31,11 +58,13 @@ export function LotBrief({ parcel, area, type, lookupAllowed }: LotBriefProps) {
   const fallback = useMemo(() => templateLotBrief(card), [card])
   const [narrative, setNarrative] = useState<LotBriefNarrative>(fallback)
   const [engine, setEngine] = useState<'template' | 'openai'>('template')
+  const [model, setModel] = useState('')
   const [pending, setPending] = useState(false)
 
   useEffect(() => {
     setNarrative(fallback)
     setEngine('template')
+    setModel('')
     if (import.meta.env.MODE === 'test') return
     const controller = new AbortController()
     setPending(true)
@@ -49,11 +78,13 @@ export function LotBrief({ parcel, area, type, lookupAllowed }: LotBriefProps) {
         if (!res.ok) return
         const body = (await res.json()) as {
           engine?: string
+          model?: string
           narrative?: LotBriefNarrative
         }
         if (body.engine === 'openai' && body.narrative?.headline) {
           setNarrative(body.narrative)
           setEngine('openai')
+          setModel(body.model?.trim() || 'OpenAI')
         }
       })
       .catch(() => undefined)
@@ -63,18 +94,14 @@ export function LotBrief({ parcel, area, type, lookupAllowed }: LotBriefProps) {
     return () => controller.abort()
   }, [card, fallback])
 
+  const aiWritten = engine === 'openai'
+
   return (
-    <div className="lot-brief">
-      <p className="eyebrow">Plain-language brief</p>
+    <div className={aiWritten ? 'lot-brief lot-brief--ai' : 'lot-brief'}>
+      <p className="eyebrow">{aiWritten ? 'AI-generated brief' : 'Plain-language brief'}</p>
+      <LotBriefBanner engine={engine} pending={pending} model={model} />
       <h4 className="lot-brief__headline">{narrative.headline}</h4>
       <p className="lot-brief__summary">{narrative.summary}</p>
-      <p className="lot-brief__engine">
-        {engine === 'openai'
-          ? 'OpenAI, grounded in the Need / Fit / Allowed snapshot'
-          : pending
-            ? 'Snapshot template · asking the model to rephrase…'
-            : 'Snapshot template (add OPENAI_API_KEY to use a model writeup)'}
-      </p>
       {SECTIONS.map(([title, key]) => (
         <details key={key} className="parcel-card__more" open={key === 'demand' || key === 'transit'}>
           <summary>{title}</summary>

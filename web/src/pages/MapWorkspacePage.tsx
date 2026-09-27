@@ -63,10 +63,10 @@ function scenarioCards(
   scenarios: readonly ScenarioDefinition[],
   weights: ValueWeights,
 ): ScenarioScorecard[] {
-  const scores = new Map(
+  const results = new Map(
     rankScenarios(scenarios, toModelWeights(weights)).map((result) => [
       result.scenarioId,
-      result.score / 100,
+      result,
     ]),
   )
 
@@ -102,7 +102,15 @@ function scenarioCards(
       carbon: scenario.valueScores.lowCarbon,
       climate: scenario.valueScores.climateSafety,
       speed: scenario.valueScores.speedToBuild,
-      score: scores.get(scenario.id) ?? 0,
+      score: (results.get(scenario.id)?.score ?? 0) / 100,
+      contributions: results.get(scenario.id)?.contributions ?? {
+        protectResidents: 0,
+        lowCarbon: 0,
+        climateSafety: 0,
+        deepAffordability: 0,
+        speedToBuild: 0,
+      },
+      excluded: results.get(scenario.id)?.excluded ?? [],
       facts: factLines,
       unavailable: scenario.unavailable,
     }

@@ -20,6 +20,10 @@ export interface ScenarioScorecard {
   climate: number | null
   speed: number | null
   score: number
+  /** Points (0..100 scale) each priority adds to `score`. */
+  contributions: Record<keyof ValueWeights, number>
+  /** Priorities left out of the score because their input is missing. */
+  excluded: (keyof ValueWeights)[]
   /** Short factual notes derived from the tract, e.g. "24 homes by right". */
   facts: string[]
   /** Reasons a metric is not available. */
@@ -120,6 +124,88 @@ function metricLabel(value: number | null) {
   return 'Weak'
 }
 
+function priorityLabel(key: keyof ValueWeights) {
+  return WEIGHT_META.find((item) => item.key === key)?.label ?? key
+}
+
+/** Points each priority could add at most: its share of the weights in play. */
+function maxPoints(weights: ValueWeights, excluded: (keyof ValueWeights)[]) {
+  const scored = WEIGHT_META.filter((item) => !excluded.includes(item.key))
+  const total = scored.reduce((sum, item) => sum + Math.max(0, weights[item.key]), 0)
+  return Object.fromEntries(
+    WEIGHT_META.map((item) => [
+      item.key,
+      total === 0 || excluded.includes(item.key)
+        ? 0
+        : (Math.max(0, weights[item.key]) * 100) / total,
+    ]),
+  ) as Record<keyof ValueWeights, number>
+}
+
+/** One sentence naming the priority that most separates two adjacent ranks. */
+function rankReason(
+  scenario: ScenarioScorecard,
+  neighbor: ScenarioScorecard | undefined,
+  ahead: boolean,
+) {
+  if (!neighbor) return null
+  const gap = Math.round(Math.abs(scenario.score - neighbor.score) * 100)
+  if (gap === 0) return `Tied with ${neighbor.label} under these priorities.`
+  const diffs = WEIGHT_META.map((item) => ({
+    key: item.key,
+    diff: scenario.contributions[item.key] - neighbor.contributions[item.key],
+  }))
+  const decisive = diffs.reduce((best, item) =>
+    (ahead ? item.diff > best.diff : item.diff < best.diff) ? item : best,
+  )
+  const points = Math.round(Math.abs(decisive.diff))
+  return ahead
+    ? `Leads ${neighbor.label} by ${gap} points, mostly on ${priorityLabel(decisive.key).toLowerCase()} (+${points}).`
+    : `Trails ${neighbor.label} by ${gap} points, mostly on ${priorityLabel(decisive.key).toLowerCase()} (−${points}).`
+}
+
+function ScoreBreakdown({
+  scenario,
+  weights,
+}: {
+  scenario: ScenarioScorecard
+  weights: ValueWeights
+}) {
+  const ceiling = maxPoints(weights, scenario.excluded)
+  return (
+    <div className="score-breakdown">
+      <p className="eyebrow">Where the points come from</p>
+      <ul>
+        {WEIGHT_META.map((item) => {
+          const excluded = scenario.excluded.includes(item.key)
+          const earned = scenario.contributions[item.key]
+          const possible = ceiling[item.key]
+          return (
+            <li
+              key={item.key}
+              className={excluded ? 'score-breakdown__row--excluded' : undefined}
+            >
+              <span>{item.label}</span>
+              <span className="score-breakdown__bar" aria-hidden="true">
+                <span
+                  style={{
+                    width: `${possible === 0 ? 0 : Math.min(100, (earned / possible) * 100)}%`,
+                  }}
+                />
+              </span>
+              <span>
+                {excluded
+                  ? 'Not scored'
+                  : `${Math.round(earned)} of ${Math.round(possible)}`}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 function Metric({ label, value }: { label: string; value: number | null }) {
   return (
     <div className={value == null ? 'metric-unavailable' : undefined}>
@@ -215,6 +301,12 @@ export function ScenarioBuilder({
                 <strong>{Math.round(scenario.score * 100)}</strong>
               </div>
               <p>{scenario.description}</p>
+              <p className="score-reason">
+                {index === 0
+                  ? rankReason(scenario, ranked[1], true)
+                  : rankReason(scenario, ranked[index - 1], false)}
+              </p>
+              <ScoreBreakdown scenario={scenario} weights={weights} />
               <dl>
                 <Metric label="Household needs served" value={scenario.householdsServed} />
                 <Metric label="Land fit" value={scenario.landFit} />
