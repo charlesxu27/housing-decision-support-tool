@@ -1,7 +1,9 @@
-import { TYPE_IDS, type HexRecord, type TypeId } from '../data/types'
-import type { MapMode } from '../map/MapView'
+import { TYPE_IDS, type AreaRecord, type TypeId } from '../data/types'
+
+export type MapMode = 'match' | 'need'
 
 export interface MapConfiguration {
+  /** Census tract GEOID of the selected analysis area. */
   place: string
   type: TypeId
   view: MapMode
@@ -15,9 +17,13 @@ export const DEFAULT_MAP_CONFIGURATION: MapConfiguration = {
   dimension: '2d',
 }
 
+/**
+ * Parses a shared map URL. `place` must be a loaded tract id; otherwise the
+ * first loaded tract is used so a stale deep link still opens the workspace.
+ */
 export function parseMapConfiguration(
   search: string,
-  places: readonly Pick<HexRecord, 'h3'>[],
+  places: readonly Pick<AreaRecord, 'id'>[],
 ): MapConfiguration {
   const params = new URLSearchParams(search)
   const requestedPlace = params.get('place')
@@ -25,8 +31,8 @@ export function parseMapConfiguration(
 
   return {
     place:
-      places.find((place) => place.h3 === requestedPlace)?.h3 ??
-      places[0]?.h3 ??
+      places.find((place) => place.id === requestedPlace)?.id ??
+      places[0]?.id ??
       '',
     type: TYPE_IDS.includes(requestedType as TypeId)
       ? (requestedType as TypeId)

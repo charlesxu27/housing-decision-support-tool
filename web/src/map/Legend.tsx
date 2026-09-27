@@ -1,4 +1,4 @@
-import type { MapMode } from './MapView'
+import type { MapMode } from '../shared/mapState'
 
 const MATCH_ITEMS = [
   ['#0d9488', 'Ready match'],
@@ -8,8 +8,8 @@ const MATCH_ITEMS = [
   ['#adb5b5', 'Low priority'],
   ['#5c656e', 'Zoning unknown'],
   ['#c23f3f', 'Not recommended'],
-  ['#68716b', 'Mixed results'],
-  ['#d9ddd9', 'Not scored yet'],
+  ['#7c7d82', 'Insufficient data'],
+  ['#d9ddd9', 'No loaded tracts'],
 ]
 
 const NEED_ITEMS = [
@@ -17,8 +17,7 @@ const NEED_ITEMS = [
   ['#ed9f30', 'Medium need'],
   ['#3e967c', 'Low need'],
   ['#7c7d82', 'Uncertain'],
-  ['#68716b', 'Mixed results'],
-  ['#d9ddd9', 'Not scored yet'],
+  ['#d9ddd9', 'No loaded tracts'],
 ]
 
 export function Legend({ mode }: { mode: MapMode }) {
@@ -33,7 +32,9 @@ export function Legend({ mode }: { mode: MapMode }) {
         </div>
       ))}
       <p className="legend-note">
-        Boundaries change as you zoom: neighborhoods → Census block groups.
+        Boundaries change as you zoom: municipalities and neighborhoods →
+        Census tracts → parcels. Summary areas fade when no single result
+        covers half their parcels.
       </p>
     </aside>
   )

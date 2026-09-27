@@ -1,4 +1,5 @@
-import type { HexRecord, TypeId } from '../data/types'
+import type { AreaRecord, SummaryArea, TypeId } from '../data/types'
+import { heaviestMember } from '../model/area'
 import type { ValueWeights } from '../panels/ScenarioBuilder'
 import type { MapConfiguration } from '../shared/mapState'
 import { TYPE_LABELS } from '../shared/labels'
@@ -27,6 +28,7 @@ export interface PlanningAnswers {
   role: RoleId | ''
   context: string
   goal: GoalId | ''
+  /** Municipality or neighborhood `SummaryArea.id` chosen in the wizard. */
   place: string
   housingType: TypeId | ''
   priorities: ValueWeights
@@ -86,7 +88,7 @@ export const PRIORITY_OPTIONS: Array<{
   {
     key: 'speedToBuild',
     label: 'Speed to build',
-    explanation: 'Raises approaches with a simpler illustrative delivery path.',
+    explanation: 'Raises approaches with a simpler modeled delivery path.',
   },
 ]
 
@@ -99,10 +101,13 @@ const REQUIRED_BY_STEP: Array<Array<keyof PlanningAnswers>> = [
   [],
 ]
 
+export const INVALID_PLACE_MESSAGE =
+  'Choose a municipality or Pittsburgh neighborhood from the loaded data.'
+
 export function validatePlanningStep(
   step: number,
   answers: PlanningAnswers,
-  validPlaces: readonly Pick<HexRecord, 'h3'>[],
+  validPlaces: readonly Pick<SummaryArea, 'id'>[],
 ): string[] {
   const errors: string[] = []
   const required = REQUIRED_BY_STEP[step] ?? []
@@ -111,8 +116,8 @@ export function validatePlanningStep(
     if (!answers[field]) errors.push(`Choose an option before continuing.`)
   }
 
-  if (step === 2 && !validPlaces.some((place) => place.h3 === answers.place)) {
-    errors.push('Choose one of the available illustrative geographies.')
+  if (step === 2 && !validPlaces.some((place) => place.id === answers.place)) {
+    errors.push(INVALID_PLACE_MESSAGE)
   }
 
   if (
@@ -127,27 +132,37 @@ export function validatePlanningStep(
   return [...new Set(errors)]
 }
 
+/**
+ * Turns wizard answers into a shareable map configuration. The chosen
+ * summary area resolves to its heaviest member tract, which is what the map
+ * selects and reports on.
+ */
 export function createPlanningHandoff(
   answers: PlanningAnswers,
-  places: readonly HexRecord[],
+  summaries: readonly SummaryArea[],
+  areasById: ReadonlyMap<string, AreaRecord>,
 ): PlanningHandoff {
-  const place = places.find((candidate) => candidate.h3 === answers.place)
-  if (!place || !answers.role || !answers.goal || !answers.housingType) {
+  const summary = summaries.find((candidate) => candidate.id === answers.place)
+  if (!summary || !answers.role || !answers.goal || !answers.housingType) {
     throw new Error('Planning answers are incomplete.')
   }
 
-  const placeName = place.neighborhood ?? place.muni
+  const tract = heaviestMember(summary, areasById)
+  if (!tract) {
+    throw new Error(`No loaded tract belongs to ${summary.label}.`)
+  }
+
   const goal = GOAL_OPTIONS.find((option) => option.value === answers.goal)
 
   return {
     answers,
     configuration: {
-      place: place.h3,
+      place: tract.id,
       type: answers.housingType,
       view: answers.goal === 'understand_need' ? 'need' : 'match',
       dimension: '2d',
     },
     weights: { ...answers.priorities },
-    summary: `${goal?.label ?? 'Planning'} for ${TYPE_LABELS[answers.housingType]} in ${placeName}. Scenario rankings reflect the priorities you selected; map facts do not change.`,
+    summary: `${goal?.label ?? 'Planning'} for ${TYPE_LABELS[answers.housingType]} in ${summary.label}, starting from ${tract.name}. Scenario rankings reflect the priorities you selected; map facts do not change.`,
   }
 }
