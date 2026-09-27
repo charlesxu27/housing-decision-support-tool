@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { ILLUSTRATIVE_HEXES } from '../data/fixtures'
+import { buildArea } from '../test/builders'
 import { buildGroundedAnswer } from './answers'
 import { retrieveKnowledge } from './retrieval'
 
 describe('retrieveKnowledge', () => {
   it.each([
-    ['Is this data authoritative or just a demo fixture?', 'fixture-limitations'],
+    ['Which data sources and vintages does the map use?', 'data-sources'],
     ['How do need, fit, parcels, and allowed make a match?', 'need-fit-allowed'],
+    ['Why is zoning unknown outside the city and what is missing?', 'coverage-limits'],
     ['Can I build this by right under current zoning?', 'zoning-verification'],
     ['What floodway, slope, and undermining hazards matter?', 'climate-hazards'],
     ['What should a planner verify next with residents?', 'human-next-steps'],
@@ -30,24 +31,34 @@ describe('retrieveKnowledge', () => {
 })
 
 describe('buildGroundedAnswer', () => {
-  const selectedHex = ILLUSTRATIVE_HEXES[0]
+  const selectedArea = buildArea({
+    allowed: { townhome: 'special_exception' },
+    risk: { displacement: null, slopeShare: 0.04 },
+  })
 
   it('grounds every answer section in a labeled citation', () => {
     const answer = buildGroundedAnswer({
       query: 'What zoning approval and ordinance checks remain?',
-      selectedHex,
+      selectedArea,
       selectedType: 'townhome',
       matchStatus: 'needs_approval',
+      zoningDraft: true,
     })
     const citationIds = new Set(answer.citations.map(({ id }) => id))
 
     expect(answer.status).toBe('answer')
-    expect(answer.citations[0]?.label).toContain('Selected fixture:')
+    expect(answer.citations[0]?.label).toBe(
+      'Selected tract: Tract 1307, Homewood North, Pittsburgh (GEOID 42003130700)',
+    )
     expect(answer.citations.some(({ label }) => label.includes('zoning'))).toBe(
       true,
     )
-    expect(answer.sections[0]?.text).toContain('fixture values')
+    expect(answer.sections[0]?.text).toContain('special exception')
+    expect(answer.sections[0]?.text).toContain('draft, not human-verified')
     expect(answer.sections[0]?.text).toContain('needs approval')
+    expect(answer.sections[0]?.text).toContain('1,940 weekday transit trips')
+    expect(answer.sections[0]?.text).toContain('displacement index not available')
+    expect(answer.sections[0]?.text).not.toMatch(/fixture|illustrative/i)
     expect(
       answer.sections.every(
         ({ citationIds: sectionCitationIds }) =>
@@ -57,10 +68,20 @@ describe('buildGroundedAnswer', () => {
     ).toBe(true)
   })
 
+  it('explains unknown zoning outside the City', () => {
+    const answer = buildGroundedAnswer({
+      query: 'What zoning checks remain?',
+      selectedArea: buildArea({ inCity: false }),
+      selectedType: 'adu',
+    })
+
+    expect(answer.sections[0]?.text).toContain('outside the City of Pittsburgh')
+  })
+
   it('returns a transparent no-result state without unsupported citations', () => {
     const answer = buildGroundedAnswer({
       query: 'quasars sonnets and sourdough',
-      selectedHex,
+      selectedArea,
       selectedType: 'adu',
     })
 

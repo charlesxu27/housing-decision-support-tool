@@ -1,4 +1,6 @@
-import type { MapMode } from '../map/MapView'
+import type { SummaryArea } from '../data/types'
+import type { MapMode } from '../shared/mapState'
+import { PlacePicker } from './PlacePicker'
 
 interface Option {
   value: string
@@ -6,9 +8,12 @@ interface Option {
 }
 
 interface ToolbarProps {
-  places: Option[]
-  place: string
-  onPlaceChange: (value: string) => void
+  summaries: readonly SummaryArea[]
+  /** Summary area containing the selected tract, when one is known. */
+  selectedSummaryId: string | null
+  /** Label for the currently selected tract, e.g. "Tract 1307 · Homewood North, Pittsburgh". */
+  selectedLabel: string
+  onSummaryChange: (summary: SummaryArea) => void
   types: Option[]
   type: string
   onTypeChange: (value: string) => void
@@ -19,9 +24,10 @@ interface ToolbarProps {
 }
 
 export function Toolbar({
-  places,
-  place,
-  onPlaceChange,
+  summaries,
+  selectedSummaryId,
+  selectedLabel,
+  onSummaryChange,
   types,
   type,
   onTypeChange,
@@ -33,18 +39,14 @@ export function Toolbar({
   return (
     <div className="toolbar" aria-label="Map controls">
       <div className="field">
-        <label htmlFor="place-select">Place</label>
-        <select
-          id="place-select"
-          value={place}
-          onChange={(event) => onPlaceChange(event.target.value)}
-        >
-          {places.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <PlacePicker
+          id="place-search"
+          label="Place"
+          summaries={summaries}
+          value={selectedSummaryId}
+          displayValue={selectedLabel}
+          onChange={onSummaryChange}
+        />
       </div>
       <div className="field">
         <label htmlFor="type-select">Housing type</label>

@@ -1,4 +1,5 @@
-import type { HexRecord, MatchStatus, TypeId } from '../data/types'
+import type { AreaRecord, MatchStatus, TypeId } from '../data/types'
+import { areaPlace } from '../model/area'
 import { retrieveKnowledge } from './retrieval'
 
 export interface CopilotCitation {
@@ -22,9 +23,11 @@ export interface GroundedAnswer {
 
 export interface BuildAnswerInput {
   query: string
-  selectedHex: HexRecord
+  selectedArea: AreaRecord
   selectedType: TypeId
   matchStatus?: MatchStatus
+  /** True when the Pittsburgh zoning matrix has not been human-verified. */
+  zoningDraft?: boolean
 }
 
 const TYPE_LABELS: Record<TypeId, string> = {
@@ -58,11 +61,16 @@ function display(value: string): string {
   return DISPLAY_LABELS[value] ?? value
 }
 
+function pct(value: number | null): string {
+  return value == null ? 'not available' : `${Math.round(value * 100)}%`
+}
+
 export function buildGroundedAnswer({
   query,
-  selectedHex,
+  selectedArea,
   selectedType,
   matchStatus,
+  zoningDraft = false,
 }: BuildAnswerInput): GroundedAnswer {
   const retrieved = retrieveKnowledge(query)
 
@@ -74,7 +82,7 @@ export function buildGroundedAnswer({
         {
           heading: 'Try a planning topic',
           text:
-            'This local preview could not connect that question to its small knowledge corpus. Ask about the fixture data, Need · Fit · Allowed, zoning, hazards, or human review.',
+            'This local preview could not connect that question to its small knowledge corpus. Ask about the data sources, Need · Fit · Allowed, zoning, hazards, coverage limits, or human review.',
           citationIds: [],
         },
       ],
@@ -83,23 +91,39 @@ export function buildGroundedAnswer({
     }
   }
 
-  const place =
-    selectedHex.neighborhood ?? `${selectedHex.muni} planning area`
-  const fit = selectedHex.fit[selectedType]
+  const place = `${selectedArea.name}, ${areaPlace(selectedArea)}`
+  const fit = selectedArea.fit[selectedType]
+  const allowed = selectedArea.allowed[selectedType]
   const selectedCitation: CopilotCitation = {
-    id: 'selected-fixture',
-    label: `Selected fixture: ${place} (${selectedHex.h3})`,
+    id: 'selected-tract',
+    label: `Selected tract: ${place} (GEOID ${selectedArea.id})`,
   }
+  const zoningNote = !selectedArea.inCity
+    ? 'zoning unknown because the tract is outside the City of Pittsburgh'
+    : zoningDraft
+      ? `zoning marked ${display(allowed)} from the draft, not human-verified, Pittsburgh matrix`
+      : `zoning marked ${display(allowed)}`
   const selectedFacts = [
-    `${TYPE_LABELS[selectedType]} is shown with ${display(selectedHex.need[selectedType])} need`,
-    `${display(fit.band)} fit across ${fit.parcels} illustrative parcels`,
-    `an illustrative range of ${fit.homes[0]}–${fit.homes[1]} homes`,
-    `and zoning marked ${display(selectedHex.allowed[selectedType])}`,
+    `${TYPE_LABELS[selectedType]} shows ${display(selectedArea.need[selectedType])} need`,
+    `${display(fit.band)} fit across ${fit.parcels} suitable parcels`,
+    `a modeled range of ${fit.homes[0]}–${fit.homes[1]} homes`,
+    zoningNote,
   ]
 
   if (matchStatus) {
-    selectedFacts.push(`The current match status is ${display(matchStatus)}`)
+    selectedFacts.push(`the current match status is ${display(matchStatus)}`)
   }
+
+  const hazardFacts = [
+    `${selectedArea.transitTrips800m.toLocaleString()} weekday transit trips within 800 m`,
+    `flood zone share ${pct(selectedArea.risk.floodShare)}`,
+    selectedArea.risk.floodway
+      ? 'mostly regulatory floodway'
+      : `floodway share ${pct(selectedArea.risk.floodwayShare)}`,
+    `steep slopes ${pct(selectedArea.risk.slopeShare)}`,
+    `undermined land ${pct(selectedArea.risk.undermined)}`,
+    `displacement index ${pct(selectedArea.risk.displacement)}`,
+  ]
 
   const knowledgeCitations = retrieved.map(({ snippet }) => ({
     id: snippet.id,
@@ -116,8 +140,8 @@ export function buildGroundedAnswer({
     title: `Grounded notes for ${place}`,
     sections: [
       {
-        heading: 'Selected map context',
-        text: `${selectedFacts.join(', ')}. These are fixture values, not verified findings.`,
+        heading: 'Selected tract context',
+        text: `${selectedFacts.join(', ')}. Transit and hazards: ${hazardFacts.join(', ')}. Values marked not available were not published by the source.`,
         citationIds: [selectedCitation.id],
       },
       ...knowledgeSections,

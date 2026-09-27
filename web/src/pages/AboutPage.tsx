@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { PublishedSources } from '../panels/PublishedSources'
 import { MethodStory } from '../story'
 
 export function AboutPage() {
@@ -25,8 +26,8 @@ export function AboutPage() {
           <p>
             Household patterns, housing stock, modeled site fit, hazards, and
             zoning status form the factual side of the model. Priority controls
-            change the relative order of illustrative scenarios. They cannot
-            make a prohibited use permitted or erase a risk.
+            change the relative order of scenarios built from the selected
+            tract. They cannot make a prohibited use permitted or erase a risk.
           </p>
           <p>
             That separation is intentional: disagreement about priorities
@@ -36,15 +37,27 @@ export function AboutPage() {
         </article>
         <article className="scope-card">
           <p className="page-kicker">Current data scope</p>
-          <h2>A workflow demo—not a local finding.</h2>
+          <h2>A screening tool—not a local finding.</h2>
           <p>
-            The map currently uses plausible fixture values around Homewood,
-            Wilkinsburg, and nearby Pittsburgh neighborhoods. Geometry,
-            demographic values, parcel capacity, zoning, hazards, transit, and
-            scenario scores are illustrative unless the interface explicitly
-            says otherwise.
+            The map reads a versioned snapshot of public data: ACS 5-year
+            household and housing-stock estimates by Census tract, Allegheny
+            County parcels and assessments, Pittsburgh zoning districts with a
+            code matrix that stays marked draft until a person reviews it, FEMA
+            flood hazard layers, PRT transit schedules, and City slope and
+            undermined-area layers. Need and Fit cover the county; Allowed is
+            computed only inside Pittsburgh and shown as unknown elsewhere.
+            Values a source did not publish are shown as not available, never
+            filled in. The map shows the build date and source vintages.
           </p>
         </article>
+      </section>
+
+      <section className="page-section" aria-labelledby="sources-heading">
+        <header className="section-intro">
+          <p className="page-kicker">Source catalog</p>
+          <h2 id="sources-heading">Every number links back to a public dataset.</h2>
+        </header>
+        <PublishedSources heading="Sources in this snapshot" />
       </section>
 
       <section className="page-section limitations">

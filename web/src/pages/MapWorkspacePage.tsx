@@ -1,21 +1,33 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PlanningCopilot } from '../copilot/PlanningCopilot'
-import { ILLUSTRATIVE_HEXES } from '../data/fixtures'
-import { TYPE_IDS, type HexRecord, type TypeId } from '../data/types'
+import { DataState } from '../data/DataState'
+import type { Snapshot } from '../data/load'
+import { useSnapshot } from '../data/useSnapshot'
+import { dataVintageLabel } from '../data/vintage'
+import {
+  TYPE_IDS,
+  type AreaRecord,
+  type ParcelTileProperties,
+  type TypeId,
+} from '../data/types'
 import { Legend } from '../map/Legend'
-import { MapView, type MapMode } from '../map/MapView'
-import { deriveMatchStatus } from '../model/match'
+import { MapView, type MapFocus } from '../map/MapView'
+import {
+  areaLabel,
+  areaStatus,
+  heaviestMember,
+  summariesForArea,
+} from '../model/area'
 import {
   BALANCED_WEIGHTS,
-  SCENARIOS,
+  buildScenarios,
   rankScenarios,
+  type ScenarioDefinition,
   type ValueWeights as ModelValueWeights,
 } from '../model/scenarios'
-import {
-  PlaceReport,
-  type HousingTypeRow,
-} from '../panels/PlaceReport'
+import { ParcelCard } from '../panels/ParcelCard'
+import { PlaceReport, type HousingTypeRow } from '../panels/PlaceReport'
 import {
   ScenarioBuilder,
   type ScenarioScorecard,
@@ -24,28 +36,16 @@ import {
 import { Toolbar } from '../panels/Toolbar'
 import { WhyThisColor } from '../panels/WhyThisColor'
 import { usePlanningStore } from '../planning/store'
-import { STATUS_LABELS, TYPE_LABELS } from '../shared/labels'
+import { TYPE_LABELS } from '../shared/labels'
 import {
   parseMapConfiguration,
   toMapSearch,
   type MapConfiguration,
+  type MapMode,
 } from '../shared/mapState'
 import { DecisionRibbon, MethodStory } from '../story'
 
-type ViewCell = HexRecord & { name: string }
-
-function cellName(cell: HexRecord) {
-  return cell.neighborhood ?? cell.muni
-}
-
-function statusFor(cell: HexRecord, type: TypeId) {
-  return deriveMatchStatus({
-    need: cell.need[type],
-    fit: cell.fit[type].band,
-    allowed: cell.allowed[type],
-    floodway: cell.risk.floodway,
-  })
-}
+const TARGET_HOMES = 40
 
 function toModelWeights(weights: ValueWeights): ModelValueWeights {
   return {
@@ -57,58 +57,133 @@ function toModelWeights(weights: ValueWeights): ModelValueWeights {
   }
 }
 
-function scenarioCards(weights: ValueWeights): ScenarioScorecard[] {
+function scenarioCards(
+  scenarios: readonly ScenarioDefinition[],
+  weights: ValueWeights,
+): ScenarioScorecard[] {
   const scores = new Map(
-    rankScenarios(SCENARIOS, toModelWeights(weights)).map((result) => [
+    rankScenarios(scenarios, toModelWeights(weights)).map((result) => [
       result.scenarioId,
       result.score / 100,
     ]),
   )
 
-  return SCENARIOS.map((scenario) => {
+  return scenarios.map((scenario) => {
     const homes = Object.values(scenario.mix).reduce(
       (sum, count) => sum + (count ?? 0),
       0,
     )
+    const { facts } = scenario
     const zoningEase =
       homes === 0
         ? 0
         : Math.min(
             1,
-            (scenario.facts.homesByRight +
-              scenario.facts.homesNeedApproval * 0.55) /
-              homes,
+            (facts.homesByRight + facts.homesNeedApproval * 0.55) / homes,
           )
+    const factLines = [
+      `${facts.homesByRight} homes by right · ${facts.homesNeedApproval} need approval · ${facts.homesNeedRezoning} need rezoning · ${facts.homesZoningUnknown} zoning unknown`,
+      `${facts.suitableParcels} suitable parcels for about ${facts.parcelsRequired} required`,
+      `${facts.climateExposedHomes} homes in a flood zone · about ${facts.estimatedDeliveryMonths} months to deliver (assumption)`,
+      `Embodied carbon ${facts.carbonKgCo2ePerHome[0].toLocaleString()}–${facts.carbonKgCo2ePerHome[1].toLocaleString()} kg CO2e per home (assumption)`,
+    ]
 
     return {
       id: scenario.id,
       label: scenario.name,
       description: scenario.description,
       homes,
-      householdsServed: scenario.facts.householdsServedShare,
-      landFit: Math.min(
-        1,
-        scenario.facts.suitableParcels /
-          Math.max(1, scenario.facts.parcelsRequired),
-      ),
+      householdsServed: facts.householdsServedShare,
+      landFit: Math.min(1, facts.suitableParcels / Math.max(1, facts.parcelsRequired)),
       zoningEase,
-      displacementSafety: 1 - scenario.facts.displacementPressure,
+      displacementSafety: scenario.valueScores.protectResidents,
       carbon: scenario.valueScores.lowCarbon,
       climate: scenario.valueScores.climateSafety,
       speed: scenario.valueScores.speedToBuild,
       score: scores.get(scenario.id) ?? 0,
+      facts: factLines,
+      unavailable: scenario.unavailable,
     }
   })
 }
 
-export function MapWorkspacePage() {
-  const cells = useMemo<ViewCell[]>(
-    () => ILLUSTRATIVE_HEXES.map((cell) => ({ ...cell, name: cellName(cell) })),
-    [],
+function zoningNote(area: AreaRecord, zoningDraft: boolean): string {
+  if (!area.inCity) {
+    return `Zoning for ${area.muni} is not in the snapshot. Allowed is computed only inside Pittsburgh; verify with the municipality.`
+  }
+  return zoningDraft
+    ? 'Pittsburgh zoning matrix is draft and not human-verified. Confirm the code section before relying on it.'
+    : 'Pittsburgh zoning matrix rows are human-verified; confirm overlays and lot conditions before acting.'
+}
+
+function buildUnknowns(
+  area: AreaRecord,
+  zoningDraft: boolean,
+  sourcesUnavailable: string[],
+): string[] {
+  const items: string[] = []
+  if (!area.inCity) {
+    items.push(
+      `Zoning for ${area.muni} is unknown: Allowed is computed only inside the City of Pittsburgh.`,
+    )
+  } else if (zoningDraft) {
+    items.push(
+      'Pittsburgh zoning statuses come from a draft matrix that has not been human-verified.',
+    )
+  }
+  if (area.risk.slopeShare == null) {
+    items.push('Steep-slope coverage is not available outside the City slope layer.')
+  }
+  if (area.risk.undermined == null) {
+    items.push('Undermined-area coverage is not available for this tract.')
+  }
+  if (area.risk.displacement == null) {
+    items.push(
+      'Displacement index is not available because renter share, cost burden, or median income was not published.',
+    )
+  }
+  if (area.households.cost_burdened_renters == null) {
+    items.push('Cost-burdened renter share was not published for this tract.')
+  }
+  if (area.carbon.vmtPerHh == null) {
+    items.push('Vehicle miles per household is not wired to a source yet.')
+  }
+  const nullMeasures = [
+    ...Object.entries(area.households),
+    ...Object.entries(area.stock),
+  ].filter(([, value]) => value == null).length
+  if (nullMeasures > 0) {
+    items.push(
+      `${nullMeasures} household or stock measure${nullMeasures === 1 ? ' is' : 's are'} not available from ACS for this tract.`,
+    )
+  }
+  if (area.moeFlags.length > 0) {
+    items.push(
+      `${area.moeFlags.length} estimate${area.moeFlags.length === 1 ? ' has' : 's have'} a high margin of error: ${area.moeFlags.join(', ')}.`,
+    )
+  }
+  for (const title of sourcesUnavailable) {
+    items.push(`${title} was not available when this snapshot was built.`)
+  }
+  items.push(
+    'Sewer and water capacity are not included.',
+    'Parcel ownership and willingness to sell are unknown.',
+    'Household preferences require community engagement.',
   )
+  return items
+}
+
+interface WorkspaceProps {
+  snapshot: Snapshot
+}
+
+function Workspace({ snapshot }: WorkspaceProps) {
+  const { areas, areasById, summaries, manifest, zoningMatrix, lookupAllowed } = snapshot
+  const zoningDraft = zoningMatrix.verificationStatus === 'draft'
+  const dataVintage = dataVintageLabel(manifest)
   const [searchParams, setSearchParams] = useSearchParams()
   const [initialConfiguration] = useState(() =>
-    parseMapConfiguration(searchParams.toString(), cells),
+    parseMapConfiguration(searchParams.toString(), areas),
   )
   const handoff = usePlanningStore((state) => state.handoff)
   const initialHandoff =
@@ -117,16 +192,15 @@ export function MapWorkspacePage() {
       ? handoff
       : null
 
-  const [selectedH3, setSelectedH3] = useState(initialConfiguration.place)
-  const [selectedType, setSelectedType] = useState<TypeId>(
-    initialConfiguration.type,
-  )
+  const [selectedId, setSelectedId] = useState(initialConfiguration.place)
+  const [selectedType, setSelectedType] = useState<TypeId>(initialConfiguration.type)
   const [mode, setMode] = useState<MapMode>(initialConfiguration.view)
   const [is3d, setIs3d] = useState(initialConfiguration.dimension === '3d')
   const [copied, setCopied] = useState(false)
   const [copilotOpen, setCopilotOpen] = useState(false)
   const [explanationOpen, setExplanationOpen] = useState(false)
-  const [mapFocusVersion, setMapFocusVersion] = useState(0)
+  const [selectedParcel, setSelectedParcel] = useState<ParcelTileProperties | null>(null)
+  const [focus, setFocus] = useState<MapFocus>({ version: 0, bbox: null })
   const [weights, setWeights] = useState<ValueWeights>(
     initialHandoff?.weights ?? {
       protectResidents: BALANCED_WEIGHTS.protectResidents * 50,
@@ -137,17 +211,16 @@ export function MapWorkspacePage() {
     },
   )
 
-  const selected =
-    cells.find((cell) => cell.h3 === selectedH3) ?? cells[0]
+  const selected = areasById.get(selectedId) ?? areas[0]
   const matchingHandoff =
-    handoff?.configuration.place === selectedH3 &&
+    handoff?.configuration.place === selected.id &&
     handoff.configuration.type === selectedType
       ? handoff
       : null
 
   useEffect(() => {
     const configuration: MapConfiguration = {
-      place: selectedH3,
+      place: selected.id,
       type: selectedType,
       view: mode,
       dimension: is3d ? '3d' : '2d',
@@ -155,7 +228,7 @@ export function MapWorkspacePage() {
     setSearchParams(new URLSearchParams(toMapSearch(configuration)), {
       replace: true,
     })
-  }, [is3d, mode, selectedH3, selectedType, setSearchParams])
+  }, [is3d, mode, selected.id, selectedType, setSearchParams])
 
   useEffect(() => {
     if (!copilotOpen) return
@@ -170,22 +243,14 @@ export function MapWorkspacePage() {
     }
   }, [copilotOpen])
 
-  const getStatus = useCallback(
-    (cell: ViewCell) => statusFor(cell, selectedType),
-    [selectedType],
+  const selectedSummaries = useMemo(
+    () => summariesForArea(selected, summaries),
+    [selected, summaries],
   )
-  const getNeed = useCallback(
-    (cell: ViewCell) => cell.need[selectedType],
-    [selectedType],
-  )
-  const getTooltip = useCallback(
-    (cell: ViewCell) => {
-      const status = statusFor(cell, selectedType)
-      const fit = cell.fit[selectedType]
-      return `${TYPE_LABELS[selectedType]}: ${STATUS_LABELS[status]}. ${fit.parcels} illustrative suitable parcels.\nClick to see why.`
-    },
-    [selectedType],
-  )
+  const selectedSummary =
+    selectedSummaries.find((summary) => summary.kind === 'neighborhood') ??
+    selectedSummaries[0] ??
+    null
 
   const rows = useMemo<HousingTypeRow[]>(
     () =>
@@ -195,34 +260,25 @@ export function MapWorkspacePage() {
         need: selected.need[type],
         fit: selected.fit[type].band,
         allowed: selected.allowed[type],
-        status: statusFor(selected, type),
+        status: areaStatus(selected, type),
         parcels: selected.fit[type].parcels,
         homes: selected.fit[type].homes,
-        zoningNote: selected.inCity
-          ? 'Illustrative MVP allowance. Exact zoning section is not yet verified.'
-          : 'Zoning is not available in the fixture dataset. Verify with the municipality.',
+        zoningNote: zoningNote(selected, zoningDraft),
       })),
-    [selected],
+    [selected, zoningDraft],
   )
 
-  const unknowns = useMemo(() => {
-    const items = [
-      'Sewer and water capacity are not included.',
-      'Parcel ownership and willingness to sell are unknown.',
-      'Household preferences require community engagement.',
-    ]
-    items.unshift(
-      selected.inCity
-        ? 'Pittsburgh zoning values are illustrative until the code matrix is human-verified.'
-        : `Zoning for ${selected.muni} has not been loaded or human-verified.`,
-    )
-    if (selected.moeFlags.length > 0) {
-      items.push(
-        'One or more household estimates have high uncertainty in this fixture.',
-      )
-    }
-    return items
-  }, [selected])
+  const unknowns = useMemo(
+    () =>
+      buildUnknowns(
+        selected,
+        zoningDraft,
+        manifest.sources.filter((source) => !source.available).map((source) => source.title),
+      ),
+    [manifest.sources, selected, zoningDraft],
+  )
+
+  const scenarios = useMemo(() => buildScenarios(selected, TARGET_HOMES), [selected])
 
   const copyViewLink = async () => {
     await navigator.clipboard.writeText(window.location.href)
@@ -230,37 +286,28 @@ export function MapWorkspacePage() {
     window.setTimeout(() => setCopied(false), 1800)
   }
 
+  const selectArea = (id: string) => {
+    if (!areasById.has(id)) return
+    setSelectedId(id)
+  }
+
   return (
-    <main className="workspace-page">
-      <header className="workspace-heading">
-        <div>
-          <p className="page-kicker">Interactive prototype workspace</p>
-          <h1>Housing match map</h1>
-          <p>
-            Inspect the core map first, then open reports, scenarios, and method
-            details as needed.
-          </p>
-        </div>
-        <div className="workspace-actions">
-          <button
-            className="button button-secondary"
-            type="button"
-            aria-controls="planning-copilot-drawer"
-            aria-expanded={copilotOpen}
-            onClick={() => setCopilotOpen(true)}
-          >
-            ✦ Ask the map
-          </button>
-          <button
-            className="button button-secondary"
-            type="button"
-            onClick={copyViewLink}
-          >
-            {copied ? 'Link copied' : 'Share this view'}
-          </button>
-          <span className="prototype-pill">Fixture data</span>
-        </div>
-      </header>
+    <>
+      <WorkspaceHeader>
+        <button
+          className="button button-secondary"
+          type="button"
+          aria-controls="planning-copilot-drawer"
+          aria-expanded={copilotOpen}
+          onClick={() => setCopilotOpen(true)}
+        >
+          ✦ Ask the map
+        </button>
+        <button className="button button-secondary" type="button" onClick={copyViewLink}>
+          {copied ? 'Link copied' : 'Share this view'}
+        </button>
+        <span className="data-vintage-pill">Data: {dataVintage}</span>
+      </WorkspaceHeader>
 
       {matchingHandoff ? (
         <section className="planning-context" aria-label="Planning context">
@@ -286,14 +333,15 @@ export function MapWorkspacePage() {
       )}
 
       <Toolbar
-        places={cells.map((cell) => ({
-          value: cell.h3,
-          label: `${cell.name} · ${cell.muni}`,
-        }))}
-        place={selectedH3}
-        onPlaceChange={(h3) => {
-          setSelectedH3(h3)
-          setMapFocusVersion((version) => version + 1)
+        summaries={summaries}
+        selectedSummaryId={selectedSummary?.id ?? null}
+        selectedLabel={areaLabel(selected)}
+        onSummaryChange={(summary) => {
+          const tract = heaviestMember(summary, areasById)
+          if (!tract) return
+          setSelectedId(tract.id)
+          setSelectedParcel(null)
+          setFocus((current) => ({ version: current.version + 1, bbox: summary.bbox }))
         }}
         types={TYPE_IDS.map((type) => ({
           value: type,
@@ -308,37 +356,56 @@ export function MapWorkspacePage() {
       />
 
       <DecisionRibbon
-        placeName={selected.name}
+        placeName={areaLabel(selected)}
         typeLabel={TYPE_LABELS[selectedType]}
         need={selected.need[selectedType]}
         fit={selected.fit[selectedType].band}
         allowed={selected.allowed[selectedType]}
-        action={statusFor(selected, selectedType)}
+        action={areaStatus(selected, selectedType)}
       />
 
       <section className="map-panel workspace-map">
         <MapView
-          key={`${mapFocusVersion}-${is3d ? '3d' : '2d'}`}
-          cells={cells}
+          snapshot={snapshot}
           selected={selected}
+          type={selectedType}
           mode={mode}
           is3d={is3d}
-          getStatus={getStatus}
-          getNeed={getNeed}
-          getTooltip={getTooltip}
-          onSelect={(cell) => {
-            setSelectedH3(cell.h3)
+          focus={focus}
+          onSelectArea={(id) => {
+            selectArea(id)
+            setSelectedParcel(null)
             setExplanationOpen(true)
+          }}
+          selectedPin={selectedParcel?.pin ?? null}
+          onSelectParcel={(parcel) => {
+            setSelectedParcel(parcel)
+            setExplanationOpen(false)
           }}
         />
         <Legend mode={mode} />
-        {explanationOpen ? (
-          <WhyThisColor
-            cell={selected}
-            placeName={selected.name}
+        {selectedParcel ? (
+          <ParcelCard
+            parcel={selectedParcel}
+            area={areasById.get(selectedParcel.tract)}
             type={selectedType}
             typeLabel={TYPE_LABELS[selectedType]}
             mode={mode}
+            lookupAllowed={lookupAllowed}
+            zoningMatrix={zoningMatrix}
+            zoningDraft={zoningDraft}
+            sources={manifest.sources}
+            onClose={() => setSelectedParcel(null)}
+          />
+        ) : explanationOpen ? (
+          <WhyThisColor
+            area={selected}
+            placeName={areaLabel(selected)}
+            type={selectedType}
+            typeLabel={TYPE_LABELS[selectedType]}
+            mode={mode}
+            zoningDraft={zoningDraft}
+            sources={manifest.sources}
             onClose={() => setExplanationOpen(false)}
           />
         ) : null}
@@ -355,14 +422,12 @@ export function MapWorkspacePage() {
           </summary>
           <div className="report-panel">
             <PlaceReport
-              name={selected.name}
-              municipality={selected.muni}
-              confidence={selected.confidence}
-              householdSmall={selected.households.hh_1_2 ?? 0}
-              stockSmall={selected.stock.br_0_1 ?? 0}
+              area={selected}
               selectedTypeLabel={TYPE_LABELS[selectedType]}
               rows={rows}
               unknowns={unknowns}
+              sources={manifest.sources}
+              dataVintage={dataVintage}
             />
           </div>
         </details>
@@ -371,13 +436,14 @@ export function MapWorkspacePage() {
           <summary>
             <span>
               <small>Your values</small>
-              Compare illustrative 40-home scenarios
+              Compare {TARGET_HOMES}-home scenarios for this tract
             </span>
             <strong>Open scenarios</strong>
           </summary>
           <ScenarioBuilder
             placeName={selected.name}
-            scenarios={scenarioCards(weights)}
+            targetHomes={TARGET_HOMES}
+            scenarios={scenarioCards(scenarios, weights)}
             weights={weights}
             onWeightChange={(key, value) =>
               setWeights((current) => ({ ...current, [key]: value }))
@@ -399,10 +465,11 @@ export function MapWorkspacePage() {
 
       <p className="disclaimer">
         <strong>Decision-support prototype.</strong> Not legal, zoning,
-        financial, engineering, permitting, or final planning advice. All values
-        currently shown are illustrative fixtures for testing the product
-        workflow. Verify authoritative sources and engage affected communities
-        before acting.
+        financial, engineering, permitting, or final planning advice. Values
+        come from the public data snapshot ({dataVintage}); Allowed is
+        computed only inside Pittsburgh
+        {zoningDraft ? ' from a draft zoning matrix' : ''}. Verify
+        authoritative sources and engage affected communities before acting.
       </p>
 
       {copilotOpen ? (
@@ -427,13 +494,48 @@ export function MapWorkspacePage() {
               ×
             </button>
             <PlanningCopilot
-              selectedHex={selected}
+              selectedArea={selected}
               selectedType={selectedType}
-              matchStatus={statusFor(selected, selectedType)}
+              matchStatus={areaStatus(selected, selectedType)}
+              zoningDraft={zoningDraft}
+              dataVintage={dataVintage}
             />
           </aside>
         </div>
       ) : null}
+    </>
+  )
+}
+
+function WorkspaceHeader({ children }: { children?: ReactNode }) {
+  return (
+    <header className="workspace-heading">
+      <div>
+        <p className="page-kicker">Interactive prototype workspace</p>
+        <h1>Housing match map</h1>
+        <p>
+          Inspect the core map first, then open reports, scenarios, and method
+          details as needed.
+        </p>
+      </div>
+      {children ? <div className="workspace-actions">{children}</div> : null}
+    </header>
+  )
+}
+
+export function MapWorkspacePage() {
+  const state = useSnapshot()
+
+  return (
+    <main className="workspace-page">
+      {state.status === 'ready' && state.snapshot ? (
+        <Workspace snapshot={state.snapshot} />
+      ) : (
+        <>
+          <WorkspaceHeader />
+          <DataState state={state} subject="the map workspace" />
+        </>
+      )}
     </main>
   )
 }

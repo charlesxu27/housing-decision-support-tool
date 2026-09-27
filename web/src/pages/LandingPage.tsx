@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { PublishedSources } from '../panels/PublishedSources'
 import { MethodStory } from '../story'
 
 export function LandingPage() {
@@ -22,8 +23,9 @@ export function LandingPage() {
             </Link>
           </div>
           <p className="prototype-note">
-            Prototype preview: all current results are illustrative fixtures,
-            not findings about real parcels or zoning.
+            Prototype preview: results are screening signals built from public
+            Allegheny County and Pittsburgh data, not findings about any
+            parcel or a zoning determination.
           </p>
         </div>
         <div className="hero-visual" aria-label="Need, fit, and allowed preview">
@@ -52,7 +54,7 @@ export function LandingPage() {
           <li>
             <span>1</span>
             <h3>Describe the decision</h3>
-            <p>Choose a goal, illustrative geography, and housing type.</p>
+            <p>Choose a goal, a municipality or neighborhood, and a housing type.</p>
           </li>
           <li>
             <span>2</span>
@@ -102,6 +104,17 @@ export function LandingPage() {
             <Link to="/about">Read how decisions are framed →</Link>
           </article>
         </div>
+      </section>
+
+      <section className="page-section" aria-labelledby="landing-sources-heading">
+        <header className="section-intro">
+          <p className="page-kicker">Public data, named</p>
+          <h2 id="landing-sources-heading">Insights on the map cite the dataset they come from.</h2>
+        </header>
+        <PublishedSources heading="Sources in this snapshot" />
+        <p className="muted">
+          <Link to="/about#sources-heading">How these sources are used</Link>
+        </p>
       </section>
 
       <section className="page-section">

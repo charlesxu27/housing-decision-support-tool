@@ -19,10 +19,6 @@ export function ContactPage() {
             @
           </p>
           <h2>Project contact</h2>
-          <p>Stella S.</p>
-          <a href="mailto:stellastricker@icloud.com">
-            stellastricker@icloud.com
-          </a>
         </article>
         <article>
           <p className="card-icon" aria-hidden="true">

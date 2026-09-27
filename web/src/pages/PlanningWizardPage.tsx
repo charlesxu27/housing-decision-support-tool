@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ILLUSTRATIVE_HEXES } from '../data/fixtures'
-import { TYPE_IDS, type TypeId } from '../data/types'
+import { DataState } from '../data/DataState'
+import { useSnapshot } from '../data/useSnapshot'
+import { TYPE_IDS, type SummaryArea, type TypeId } from '../data/types'
+import { heaviestMember } from '../model/area'
+import { PlacePicker } from '../panels/PlacePicker'
 import {
   GOAL_OPTIONS,
   PRIORITY_OPTIONS,
@@ -30,9 +33,9 @@ const STEPS = [
   },
   {
     short: 'Place',
-    title: 'Choose an illustrative geography.',
+    title: 'Choose a municipality or neighborhood.',
     detail:
-      'The choice focuses the map and report. Current places contain fixture data only.',
+      'The map opens on the Census tract holding the most parcels in that place. You can move to any tract afterwards.',
   },
   {
     short: 'Type',
@@ -54,28 +57,30 @@ const STEPS = [
   },
 ] as const
 
-function placeLabel(h3: string) {
-  const place = ILLUSTRATIVE_HEXES.find((candidate) => candidate.h3 === h3)
-  if (!place) return 'Not selected'
-  const name = place.neighborhood ?? place.muni
-  return place.neighborhood ? `${name}, ${place.muni}` : name
+function placeLabel(summary: SummaryArea | undefined) {
+  if (!summary) return 'Not selected'
+  return summary.kind === 'neighborhood'
+    ? `${summary.label}, ${summary.municipality}`
+    : summary.label
 }
 
 export function PlanningWizardPage() {
   const navigate = useNavigate()
+  const snapshot = useSnapshot()
+  const { summaries, summariesById, areasById } = snapshot
   const answers = usePlanningStore((state) => state.answers)
   const updateAnswers = usePlanningStore((state) => state.updateAnswers)
   const setHandoff = usePlanningStore((state) => state.setHandoff)
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState<string[]>([])
   const current = STEPS[step]
+  const chosenSummary = summariesById.get(answers.place)
+  const chosenTract = chosenSummary
+    ? heaviestMember(chosenSummary, areasById)
+    : undefined
 
   const continueToNext = () => {
-    const nextErrors = validatePlanningStep(
-      step,
-      answers,
-      ILLUSTRATIVE_HEXES,
-    )
+    const nextErrors = validatePlanningStep(step, answers, summaries)
     setErrors(nextErrors)
     if (nextErrors.length > 0) return
     setStep((value) => Math.min(STEPS.length - 1, value + 1))
@@ -84,16 +89,20 @@ export function PlanningWizardPage() {
 
   const openMap = () => {
     const allErrors = STEPS.flatMap((_, index) =>
-      validatePlanningStep(index, answers, ILLUSTRATIVE_HEXES),
+      validatePlanningStep(index, answers, summaries),
     )
     if (allErrors.length > 0) {
       setErrors([...new Set(allErrors)])
       return
     }
 
-    const handoff = createPlanningHandoff(answers, ILLUSTRATIVE_HEXES)
-    setHandoff(handoff)
-    navigate(`/map${toMapSearch(handoff.configuration)}`)
+    try {
+      const handoff = createPlanningHandoff(answers, summaries, areasById)
+      setHandoff(handoff)
+      navigate(`/map${toMapSearch(handoff.configuration)}`)
+    } catch (error) {
+      setErrors([error instanceof Error ? error.message : 'Could not open the map.'])
+    }
   }
 
   return (
@@ -213,23 +222,39 @@ export function PlanningWizardPage() {
             ) : null}
 
             {step === 2 ? (
-              <div className="option-stack">
-                {ILLUSTRATIVE_HEXES.map((place) => (
-                  <label className="option-card" key={place.h3}>
-                    <input
-                      type="radio"
-                      name="place"
-                      value={place.h3}
-                      checked={answers.place === place.h3}
-                      onChange={() => updateAnswers({ place: place.h3 })}
-                    />
-                    <span>
-                      <strong>{place.neighborhood ?? place.muni}</strong>
-                      {place.neighborhood ? <small>{place.muni}</small> : null}
-                    </span>
-                  </label>
-                ))}
-              </div>
+              snapshot.status === 'ready' ? (
+                <div className="option-stack">
+                  <PlacePicker
+                    id="wizard-place"
+                    label="Municipality or Pittsburgh neighborhood"
+                    summaries={summaries}
+                    value={answers.place || null}
+                    displayValue={chosenSummary ? placeLabel(chosenSummary) : ''}
+                    onChange={(summary) => updateAnswers({ place: summary.id })}
+                  />
+                  {chosenSummary ? (
+                    <p className="wizard-place-note">
+                      {chosenSummary.members.length} tract
+                      {chosenSummary.members.length === 1 ? '' : 's'} ·{' '}
+                      {chosenSummary.parcels.toLocaleString()} parcels. The map
+                      opens on{' '}
+                      {chosenTract
+                        ? `${chosenTract.name} (GEOID ${chosenTract.id})`
+                        : 'its largest tract'}
+                      .
+                    </p>
+                  ) : (
+                    <p className="wizard-place-note">
+                      {snapshot.manifest?.counts.municipalities ?? summaries.length}{' '}
+                      municipalities and{' '}
+                      {snapshot.manifest?.counts.neighborhoods ?? 0} Pittsburgh
+                      neighborhoods are available.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <DataState state={snapshot} subject="the list of places" />
+              )
             ) : null}
 
             {step === 3 ? (
@@ -318,7 +343,10 @@ export function PlanningWizardPage() {
                 </div>
                 <div>
                   <dt>Geography</dt>
-                  <dd>{placeLabel(answers.place)}</dd>
+                  <dd>
+                    {placeLabel(chosenSummary)}
+                    {chosenTract ? ` · opens on ${chosenTract.name}` : ''}
+                  </dd>
                   <button type="button" onClick={() => setStep(2)}>
                     Edit
                   </button>

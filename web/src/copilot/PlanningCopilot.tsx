@@ -1,19 +1,25 @@
 import { useId, useMemo, useState, type FormEvent } from 'react'
-import type { HexRecord, MatchStatus, TypeId } from '../data/types'
+import type { AreaRecord, MatchStatus, TypeId } from '../data/types'
+import { areaLabel } from '../model/area'
 import { buildGroundedAnswer } from './answers'
 import { SUGGESTED_PROMPTS } from './knowledge'
 import './PlanningCopilot.css'
 
 export interface PlanningCopilotProps {
-  selectedHex: HexRecord | null
+  selectedArea: AreaRecord | null
   selectedType: TypeId
   matchStatus?: MatchStatus
+  zoningDraft?: boolean
+  /** Short data-vintage line, e.g. "ACS 2020-2024 · built 27 Sep 2026". */
+  dataVintage?: string
 }
 
 export function PlanningCopilot({
-  selectedHex,
+  selectedArea,
   selectedType,
   matchStatus,
+  zoningDraft = false,
+  dataVintage,
 }: PlanningCopilotProps) {
   const titleId = useId()
   const descriptionId = useId()
@@ -22,15 +28,16 @@ export function PlanningCopilot({
   const [submittedQuery, setSubmittedQuery] = useState<string | null>(null)
 
   const answer = useMemo(() => {
-    if (!selectedHex || !submittedQuery) return null
+    if (!selectedArea || !submittedQuery) return null
 
     return buildGroundedAnswer({
       query: submittedQuery,
-      selectedHex,
+      selectedArea,
       selectedType,
       matchStatus,
+      zoningDraft,
     })
-  }, [matchStatus, selectedHex, selectedType, submittedQuery])
+  }, [matchStatus, selectedArea, selectedType, submittedQuery, zoningDraft])
 
   function ask(prompt: string) {
     setQuery(prompt)
@@ -41,13 +48,14 @@ export function PlanningCopilot({
     event.preventDefault()
     const nextQuery = query.trim()
 
-    if (nextQuery && selectedHex) {
+    if (nextQuery && selectedArea) {
       setSubmittedQuery(nextQuery)
     }
   }
 
-  const placeName =
-    selectedHex?.neighborhood ?? selectedHex?.muni ?? 'No map area selected'
+  const placeName = selectedArea
+    ? areaLabel(selectedArea)
+    : 'No map area selected'
 
   return (
     <section
@@ -78,13 +86,17 @@ export function PlanningCopilot({
         an LLM and does not generate planning advice.
       </p>
 
-      <aside className="planning-copilot__fixture-note" aria-label="Data limitation">
-        <strong>Fixture limitation</strong>
+      <aside className="planning-copilot__coverage-note" aria-label="Data coverage">
+        <strong>Coverage</strong>
         <span>
-          Current values are illustrative examples—not authoritative findings
-          or a basis for planning and zoning decisions.
+          Need and Fit cover Allegheny County tracts. Allowed is computed only
+          inside Pittsburgh{zoningDraft ? ' from a draft, not human-verified, zoning matrix' : ''};
+          elsewhere zoning is unknown. Screening only, not a basis for zoning
+          decisions.
         </span>
-        <span className="planning-copilot__source-tag">Fixture data notice</span>
+        <span className="planning-copilot__source-tag">
+          {dataVintage ? `Data: ${dataVintage}` : 'Loaded snapshot'}
+        </span>
       </aside>
 
       <div className="planning-copilot__context" aria-label="Current map context">
@@ -95,13 +107,13 @@ export function PlanningCopilot({
         </div>
       </div>
 
-      {!selectedHex ? (
+      {!selectedArea ? (
         <div className="planning-copilot__empty" role="status">
           <span aria-hidden="true">⌖</span>
           <h3>Select a place to begin</h3>
           <p>
-            Choose a map area to ground questions in its illustrative Need, Fit,
-            Allowed, and risk values.
+            Choose a tract to ground questions in its Need, Fit, Allowed, and
+            hazard values.
           </p>
         </div>
       ) : (
@@ -203,7 +215,7 @@ export function PlanningCopilot({
               <span aria-hidden="true">⌁</span>
               <p>
                 Ask a question or choose a prompt. Answers quote only the local
-                corpus and selected fixture.
+                corpus and the selected tract.
               </p>
             </div>
           )}

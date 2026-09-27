@@ -64,9 +64,9 @@ export function SiteShell() {
         <div>
           <strong>Allegheny Housing Match</strong>
           <p>
-            An open-source decision-support prototype using illustrative fixture
-            data—not legal, zoning, financial, engineering, permitting, or final
-            planning advice.
+            An open-source decision-support prototype built on public Allegheny
+            County and Pittsburgh data—not legal, zoning, financial,
+            engineering, permitting, or final planning advice.
           </p>
         </div>
         <nav aria-label="Footer navigation">

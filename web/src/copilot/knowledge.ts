@@ -8,21 +8,27 @@ export interface KnowledgeSnippet {
 
 export const COPILOT_KNOWLEDGE: readonly KnowledgeSnippet[] = [
   {
-    id: 'fixture-limitations',
-    label: 'Fixture data notice',
-    title: 'Illustrative data, not findings',
+    id: 'data-sources',
+    label: 'Data sources and vintages',
+    title: 'Public data, pinned by vintage',
     text:
-      'The current map uses a small set of plausible, illustrative Pittsburgh-area fixture records. Demographic, parcel, zoning, hazard, transit, and carbon values are not authoritative findings and must not be used for planning or zoning decisions.',
+      'Household and housing-stock measures come from the ACS 2020-2024 5-year summary file at the Census tract level, with margins of error used to flag unreliable estimates. Parcel fit uses Allegheny County parcel boundaries and property assessments plus tax delinquency, condemned, and city-owned property lists. Pittsburgh zoning districts come from the City GIS layer joined to a code matrix that is draft until a person reviews each row. Flood hazard is FEMA NFHL, transit access is the PRT GTFS schedule, and slope and undermined-area layers are City of Pittsburgh datasets. The build date and every source vintage are listed in the report.',
     keywords: [
-      'fixture',
-      'sample',
-      'demo',
+      'source',
+      'sources',
       'data',
-      'limitation',
-      'authoritative',
+      'vintage',
+      'acs',
+      'census',
+      'assessment',
+      'gtfs',
+      'fema',
+      'wprdc',
       'accuracy',
       'coverage',
       'confidence',
+      'date',
+      'built',
     ],
   },
   {
@@ -30,7 +36,7 @@ export const COPILOT_KNOWLEDGE: readonly KnowledgeSnippet[] = [
     label: 'Method: Need · Fit · Allowed',
     title: 'Three distinct planning questions',
     text:
-      'Need describes whether household patterns suggest a housing-type gap. Fit estimates physical opportunity using illustrative parcel capacity and home ranges. Allowed summarizes the fixture zoning status. A match combines these dimensions but does not replace feasibility, market, legal, or community review.',
+      'Need compares who lives in a tract with the homes that exist there: household sizes against bedroom counts, seniors living alone, cost-burdened renters, overcrowding, and vacancy, scored against county tertiles. Fit counts parcels that pass a size, use, building, transit, and hazard rule for each housing type and reports a homes-possible range. Allowed summarizes the zoning status covering most residential-capable parcels. A match combines these in a fixed order but does not replace feasibility, market, legal, or community review.',
     keywords: [
       'need',
       'demand',
@@ -43,6 +49,29 @@ export const COPILOT_KNOWLEDGE: readonly KnowledgeSnippet[] = [
       'match',
       'method',
       'score',
+      'tertile',
+      'bedroom',
+    ],
+  },
+  {
+    id: 'coverage-limits',
+    label: 'Coverage limits',
+    title: 'Where the snapshot goes quiet',
+    text:
+      'Need and Fit cover every Allegheny County tract. Allowed is computed only inside the City of Pittsburgh; every other municipality shows zoning unknown until its code is reviewed. The steep-slope layer exists only for the City, so slope share is not available elsewhere. When HUD CHAS tables are not supplied, cost burden falls back to the ACS gross-rent share. A value shown as not available means the source did not publish it; nothing is filled in from a neighboring place.',
+    keywords: [
+      'limitation',
+      'limit',
+      'missing',
+      'null',
+      'available',
+      'outside',
+      'city',
+      'county',
+      'municipality',
+      'chas',
+      'unknown',
+      'gap',
     ],
   },
   {
@@ -50,7 +79,7 @@ export const COPILOT_KNOWLEDGE: readonly KnowledgeSnippet[] = [
     label: 'Planning safeguard: zoning verification',
     title: 'Verify zoning at the parcel level',
     text:
-      'Treat by-right, conditional-use, special-exception, prohibited, and unknown labels as screening signals only. Before acting, confirm the current zoning map, ordinance text, overlays, lot-specific conditions, approval pathway, and interpretation with the relevant municipality.',
+      'Treat by-right, conditional-use, special-exception, prohibited, and unknown labels as screening signals only. The Pittsburgh matrix was extracted from the Zoning Code use table and is marked draft until every row carries a reviewer. Before acting, confirm the current zoning map, ordinance text, overlays, lot-specific conditions, approval pathway, and interpretation with the relevant municipality.',
     keywords: [
       'zoning',
       'zone',
@@ -65,6 +94,9 @@ export const COPILOT_KNOWLEDGE: readonly KnowledgeSnippet[] = [
       'overlay',
       'legal',
       'build',
+      'draft',
+      'matrix',
+      'district',
     ],
   },
   {
@@ -72,7 +104,7 @@ export const COPILOT_KNOWLEDGE: readonly KnowledgeSnippet[] = [
     label: 'Planning safeguard: climate and hazards',
     title: 'Hazards are constraints, not footnotes',
     text:
-      'Floodway is a hard screening concern in the current matching logic. Flood exposure, slope, undermining, displacement risk, and transportation emissions require current authoritative sources, site investigation, and professional review; missing values mean unknown, not safe.',
+      'Any parcel that intersects a FEMA regulatory floodway is excluded from every housing type, and a tract that is mostly floodway is not recommended before any other check. Special flood hazard area share, mapped steep slopes, undermined land, and the displacement index are shown as shares of parcels so you can see exposure, not just a flag. These layers require current authoritative sources, site investigation, and professional review; missing values mean unknown, not safe.',
     keywords: [
       'climate',
       'hazard',
@@ -94,7 +126,7 @@ export const COPILOT_KNOWLEDGE: readonly KnowledgeSnippet[] = [
     label: 'Workflow: human review',
     title: 'Move from screening to accountable review',
     text:
-      'Use the preview to form questions, not conclusions. Next steps are to inspect source dates and uncertainty, validate candidate parcels, verify zoning and hazards, document assumptions, compare alternatives, and involve municipal staff, technical experts, and affected residents before a decision.',
+      'Use the map to form questions, not conclusions. Next steps are to inspect source dates and uncertainty flags, validate candidate parcels on the ground, verify zoning and hazards, document assumptions, compare alternatives, and involve municipal staff, technical experts, and affected residents before a decision.',
     keywords: [
       'next',
       'step',
@@ -115,6 +147,7 @@ export const COPILOT_KNOWLEDGE: readonly KnowledgeSnippet[] = [
 
 export const SUGGESTED_PROMPTS = [
   'How should I read Need, Fit, and Allowed?',
+  'Which data sources and vintages are used?',
   'What zoning checks are still required?',
   'Which climate and hazard limits matter here?',
   'What should a planner verify next?',

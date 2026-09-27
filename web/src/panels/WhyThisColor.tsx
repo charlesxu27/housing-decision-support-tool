@@ -1,20 +1,26 @@
-import type { Band, HexRecord, MatchStatus, TypeId } from '../data/types'
+import { CHECK_SOURCE_IDS } from '../data/citations'
+import type { AreaRecord, Band, MatchStatus, SourceRecord, TypeId } from '../data/types'
+import { SourceCite } from './SourceCite'
 import { NEED_COLORS, STATUS_COLORS } from '../map/colors'
-import type { MapMode } from '../map/MapView'
 import {
   explainMatch,
   type MatchCheck,
   type MatchCheckId,
   type MatchCheckOutcome,
 } from '../model/match'
+import { pct } from '../shared/format'
 import { STATUS_LABELS } from '../shared/labels'
+import type { MapMode } from '../shared/mapState'
 
 interface WhyThisColorProps {
-  cell: HexRecord
+  area: AreaRecord
   placeName: string
   type: TypeId
   typeLabel: string
   mode: MapMode
+  /** True when the Pittsburgh zoning matrix has not been human-verified. */
+  zoningDraft: boolean
+  sources: readonly SourceRecord[]
   onClose: () => void
 }
 
@@ -58,37 +64,33 @@ const OUTCOME_MARKS: Record<MatchCheckOutcome, string> = {
   unknown: '?',
 }
 
-function pct(value: number | null | undefined): string {
-  return value == null ? 'not available' : `${Math.round(value * 100)}%`
-}
-
 function rgb([r, g, b]: [number, number, number]): string {
   return `rgb(${r}, ${g}, ${b})`
 }
 
 function checkResult(
   check: MatchCheck,
-  cell: HexRecord,
+  area: AreaRecord,
   type: TypeId,
 ): string {
   switch (check.id) {
     case 'floodway':
       if (check.outcome === 'unknown') return 'Floodway data missing'
       return check.outcome === 'fail'
-        ? 'Floodway present'
-        : 'No floodway mapped'
+        ? 'Mostly regulatory floodway'
+        : 'Not predominantly floodway'
     case 'need':
       if (check.outcome === 'unknown') return 'No need estimate'
       return check.outcome === 'caution'
         ? 'Uncertain need (treated as viable)'
-        : `${BAND_LABELS[cell.need[type]]} need`
+        : `${BAND_LABELS[area.need[type]]} need`
     case 'fit':
       if (check.outcome === 'unknown') return 'No site-fit estimate'
       return check.outcome === 'caution'
         ? 'Uncertain fit (treated as viable)'
-        : `${BAND_LABELS[cell.fit[type].band]} fit`
+        : `${BAND_LABELS[area.fit[type].band]} fit`
     case 'allowed':
-      switch (cell.allowed[type]) {
+      switch (area.allowed[type]) {
         case 'by_right':
           return 'Allowed by right'
         case 'special_exception':
@@ -103,65 +105,96 @@ function checkResult(
   }
 }
 
+function shareBreakdown(area: AreaRecord, type: TypeId): string | null {
+  const entries = Object.entries(area.allowedShares[type] ?? {})
+    .filter(([, share]) => share != null && share > 0)
+    .sort((left, right) => (right[1] ?? 0) - (left[1] ?? 0))
+  if (entries.length === 0) return null
+  return entries
+    .map(([status, share]) => `${Math.round((share ?? 0) * 100)}% ${status.replaceAll('_', ' ')}`)
+    .join(' · ')
+}
+
 function checkMetrics(
   id: MatchCheckId,
-  cell: HexRecord,
+  area: AreaRecord,
   type: TypeId,
+  zoningDraft: boolean,
 ): string[] {
   switch (id) {
     case 'floodway':
-      return [`Share of area in a flood zone: ${pct(cell.risk.floodShare)}`]
+      return [
+        `Parcels in a FEMA flood zone: ${pct(area.risk.floodShare)} · in a regulatory floodway: ${pct(area.risk.floodwayShare)}`,
+      ]
     case 'need': {
       const metrics = [
-        `1–2 person households ${pct(cell.households.hh_1_2)} vs. 0–1 bedroom homes ${pct(cell.stock.br_0_1)}`,
-        `Cost-burdened renters: ${pct(cell.households.cost_burdened_renters)}`,
+        `1–2 person households ${pct(area.households.hh_1_2)} vs. 0–1 bedroom homes ${pct(area.stock.br_0_1)}`,
+        `Cost-burdened renters: ${pct(area.households.cost_burdened_renters)}`,
+        `Need score: ${area.needScores[type] == null ? 'not available' : area.needScores[type]!.toFixed(2)} (county tertiles set the band)`,
       ]
       if (type === 'senior_accessible') {
-        metrics.push(`Seniors living alone: ${pct(cell.households.senior_alone)}`)
+        metrics.push(`Seniors living alone: ${pct(area.households.senior_alone)}`)
       }
       if (type === 'detached_sf' || type === 'large_apartment') {
         metrics.push(
-          `5+ person households ${pct(cell.households.hh_5_plus)} vs. 3+ bedroom homes ${pct(cell.stock.br_3_plus)}`,
+          `5+ person households ${pct(area.households.hh_5_plus)} vs. 3+ bedroom homes ${pct(area.stock.br_3_plus)}`,
         )
       }
-      if (cell.moeFlags.length > 0) {
+      if (type === 'rehab_reuse') {
+        metrics.push(`Other vacant units: ${pct(area.stock.other_vacant_share)}`)
+      }
+      if (area.moeFlags.length > 0) {
         metrics.push(
-          `${cell.moeFlags.length} household estimate${cell.moeFlags.length === 1 ? ' has' : 's have'} a high margin of error`,
+          `${area.moeFlags.length} estimate${area.moeFlags.length === 1 ? ' has' : 's have'} a high margin of error: ${area.moeFlags.join(', ')}`,
         )
       }
       return metrics
     }
     case 'fit': {
-      const fit = cell.fit[type]
+      const fit = area.fit[type]
       return [
         `${fit.parcels} suitable parcels · ${fit.homes[0]}–${fit.homes[1]} homes possible`,
-        `Steep slopes: ${pct(cell.risk.slopeShare)} · Undermined land: ${pct(cell.risk.undermined)}`,
+        `Steep slopes: ${pct(area.risk.slopeShare)} · Undermined land: ${pct(area.risk.undermined)} · Weekday transit trips within 800 m: ${area.transitTrips800m.toLocaleString()}`,
       ]
     }
-    case 'allowed':
-      return [
-        cell.inCity
-          ? 'Illustrative Pittsburgh allowance; code section not yet verified.'
-          : `Zoning for ${cell.muni} has not been loaded or verified.`,
+    case 'allowed': {
+      if (!area.inCity) {
+        return [
+          `Zoning for ${area.muni} is not in the snapshot; Allowed is computed only inside Pittsburgh.`,
+        ]
+      }
+      const metrics = [
+        `Districts present: ${area.zoningDistricts.length > 0 ? area.zoningDistricts.join(', ') : 'not available'}`,
       ]
+      const breakdown = shareBreakdown(area, type)
+      if (breakdown) metrics.push(`Parcel share by status: ${breakdown}`)
+      metrics.push(
+        zoningDraft
+          ? 'Pittsburgh matrix is draft, not human-verified.'
+          : 'Pittsburgh matrix rows are human-verified.',
+      )
+      return metrics
+    }
   }
 }
 
 export function WhyThisColor({
-  cell,
+  area,
   placeName,
   type,
   typeLabel,
   mode,
+  zoningDraft,
+  sources,
   onClose,
 }: WhyThisColorProps) {
   const explanation = explainMatch({
-    need: cell.need[type],
-    fit: cell.fit[type].band,
-    allowed: cell.allowed[type],
-    floodway: cell.risk.floodway,
+    need: area.need[type],
+    fit: area.fit[type].band,
+    allowed: area.allowed[type],
+    floodway: area.risk.floodway,
   })
-  const needBand = cell.need[type]
+  const needBand = area.need[type]
   const resultLabel =
     mode === 'match'
       ? STATUS_LABELS[explanation.status]
@@ -224,13 +257,18 @@ export function WhyThisColor({
               <div>
                 <p className="why-color__check-title">
                   {CHECK_TITLES[check.id]}
-                  <strong>{checkResult(check, cell, type)}</strong>
+                  <strong>{checkResult(check, area, type)}</strong>
                 </p>
                 <ul>
-                  {checkMetrics(check.id, cell, type).map((metric) => (
+                  {checkMetrics(check.id, area, type, zoningDraft).map((metric) => (
                     <li key={metric}>{metric}</li>
                   ))}
                 </ul>
+                <SourceCite
+                  sources={sources}
+                  ids={CHECK_SOURCE_IDS[check.id]}
+                  kind={check.id === 'allowed' ? 'law' : check.id === 'fit' ? 'derived' : 'observed'}
+                />
                 {!check.considered ? (
                   <p className="why-color__skipped-note">
                     Not used: an earlier check settled the result.
@@ -243,8 +281,8 @@ export function WhyThisColor({
       </ol>
 
       <p className="why-color__footnote">
-        {Math.round(cell.confidence * 100)}% data coverage · All values are
-        illustrative fixtures.
+        {Math.round(area.confidence * 100)}% data coverage · GEOID {area.id} ·
+        values marked not available were not published by the source.
       </p>
     </aside>
   )
