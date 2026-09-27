@@ -16,10 +16,12 @@ describe('PlaceReport source citations', () => {
       />,
     )
 
+    expect(markup).toContain('>Sources<')
     expect(markup).toContain('href="https://example.org/catalog/acs"')
     expect(markup).toContain('ACS 5-year')
     expect(markup).toContain('HUD CHAS')
     expect(markup).toContain('source-cite__link--missing')
+    expect(markup).not.toContain('source-cite__menu is-open')
     expect(markup).toContain('not available in this build')
   })
 })

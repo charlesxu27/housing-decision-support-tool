@@ -3,12 +3,17 @@ import type { SourceRecord } from '../data/types'
 interface SourceCatalogProps {
   sources: readonly SourceRecord[]
   heading?: string
+  id?: string
 }
 
 /** Full source list from the snapshot, each title linked to its catalog page. */
-export function SourceCatalog({ sources, heading = 'Sources' }: SourceCatalogProps) {
+export function SourceCatalog({
+  sources,
+  heading = 'Sources',
+  id = 'sources',
+}: SourceCatalogProps) {
   return (
-    <div className="unknowns-card sources-card" id="sources">
+    <div className="unknowns-card sources-card" id={id}>
       <p className="eyebrow">{heading}</p>
       <ul>
         {sources.map((source) => (

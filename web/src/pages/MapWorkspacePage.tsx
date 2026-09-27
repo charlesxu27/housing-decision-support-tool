@@ -26,6 +26,7 @@ import {
   type ScenarioDefinition,
   type ValueWeights as ModelValueWeights,
 } from '../model/scenarios'
+import { HowMapGenerated } from '../panels/HowMapGenerated'
 import { ParcelCard } from '../panels/ParcelCard'
 import { PlaceReport, type HousingTypeRow } from '../panels/PlaceReport'
 import {
@@ -198,6 +199,7 @@ function Workspace({ snapshot }: WorkspaceProps) {
   const [is3d, setIs3d] = useState(initialConfiguration.dimension === '3d')
   const [copied, setCopied] = useState(false)
   const [copilotOpen, setCopilotOpen] = useState(false)
+  const [howMapOpen, setHowMapOpen] = useState(false)
   const [explanationOpen, setExplanationOpen] = useState(false)
   const [selectedParcel, setSelectedParcel] = useState<ParcelTileProperties | null>(null)
   const [focus, setFocus] = useState<MapFocus>({ version: 0, bbox: null })
@@ -384,6 +386,23 @@ function Workspace({ snapshot }: WorkspaceProps) {
           }}
         />
         <Legend mode={mode} />
+        <button
+          className="map-how-btn"
+          type="button"
+          aria-controls="how-map-generated"
+          aria-expanded={howMapOpen}
+          aria-label="How was this map generated?"
+          title="How was this map generated?"
+          onClick={() => setHowMapOpen(true)}
+        >
+          ?
+        </button>
+        {howMapOpen ? (
+          <HowMapGenerated
+            sources={manifest.sources}
+            onClose={() => setHowMapOpen(false)}
+          />
+        ) : null}
         {selectedParcel ? (
           <ParcelCard
             parcel={selectedParcel}

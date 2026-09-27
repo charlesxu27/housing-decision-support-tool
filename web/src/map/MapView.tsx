@@ -76,10 +76,25 @@ const CITY_NAMES = new Set(['pittsburgh', 'city of pittsburgh'])
 
 type OverlayId = 'flood' | 'transit' | 'zoning'
 
-const OVERLAYS: { id: OverlayId; label: string }[] = [
-  { id: 'flood', label: 'FEMA flood zones' },
-  { id: 'transit', label: 'Transit stops (PRT)' },
-  { id: 'zoning', label: 'Pittsburgh zoning districts' },
+const OVERLAYS: { id: OverlayId; label: string; description: string }[] = [
+  {
+    id: 'flood',
+    label: 'FEMA flood zones',
+    description:
+      'Mapped flood hazard and floodway areas. Fit already excludes regulatory floodways from suitable sites—turn this on to see where risk shapes the map.',
+  },
+  {
+    id: 'transit',
+    label: 'Transit stops (PRT)',
+    description:
+      'Port Authority stops with weekday scheduled trips. Apartment and senior Fit prefer lots near frequent service—use this to check access by eye.',
+  },
+  {
+    id: 'zoning',
+    label: 'Pittsburgh zoning districts',
+    description:
+      'City zoning district boundaries behind Allowed status. Turn on when you need to see which district drives by-right, approval, or blocked results.',
+  },
 ]
 
 function asFeatureCollection<P extends Record<string, unknown>>(
@@ -537,24 +552,35 @@ export function MapView({
         <span>{scaleHint}</span>
       </div>
       <div className="map-help">Drag to move · Scroll to zoom · Shift-drag to rotate</div>
-      <fieldset className="map-overlays">
-        <legend>Overlays</legend>
-        {OVERLAYS.map((overlay) => (
-          <label key={overlay.id}>
-            <input
-              type="checkbox"
-              checked={overlays[overlay.id]}
-              onChange={(event) =>
-                setOverlays((current) => ({
-                  ...current,
-                  [overlay.id]: event.target.checked,
-                }))
-              }
-            />
-            {overlay.label}
-          </label>
-        ))}
-      </fieldset>
+      <div className="map-overlays" role="group" aria-labelledby="map-overlays-heading">
+        <p className="map-overlays__title" id="map-overlays-heading">
+          Overlays
+        </p>
+        {OVERLAYS.map((overlay) => {
+          const tipId = `map-overlay-tip-${overlay.id}`
+          return (
+            <label key={overlay.id} className="map-overlays__option">
+              <input
+                type="checkbox"
+                checked={overlays[overlay.id]}
+                aria-describedby={tipId}
+                onChange={(event) =>
+                  setOverlays((current) => ({
+                    ...current,
+                    [overlay.id]: event.target.checked,
+                  }))
+                }
+              />
+              <span className="map-overlays__text">
+                <span className="map-overlays__label">{overlay.label}</span>
+                <span className="map-overlays__tip" id={tipId} role="tooltip">
+                  {overlay.description}
+                </span>
+              </span>
+            </label>
+          )
+        })}
+      </div>
       <div className="map-data-chip">Data: {dataVintageLabel(manifest)}</div>
       {basemapError ? (
         <div className="map-error" role="alert">
