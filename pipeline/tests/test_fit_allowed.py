@@ -2,7 +2,9 @@
 
 import pandas as pd
 
-from hdst_pipeline.allowed import lookup, matrix_index, parcel_statuses, tract_allowed
+from pathlib import Path
+
+from hdst_pipeline.allowed import load_matrix, lookup, matrix_index, parcel_statuses, tract_allowed
 from hdst_pipeline.fit import parcel_fit_flags, tertile_count_bands, tract_fit
 from hdst_pipeline.paths import TYPE_IDS
 
@@ -64,6 +66,15 @@ def test_tertile_count_bands_zero_is_low():
     s = pd.Series({"a": 0, "b": 1, "c": 5, "d": 10, "e": 20, "f": 30, "g": 40})
     b = tertile_count_bands(s)
     assert b["a"] == "low" and b["b"] == "low" and b["g"] == "high"
+
+
+def test_adu_draft_follows_pending_bill():
+    rows = load_matrix(Path(__file__).resolve().parents[1] / "zoning" / "pittsburgh_matrix.csv")
+    matrix = matrix_index(rows)
+    assert lookup(matrix, "R1D-L", "adu") == "by_right"
+    assert lookup(matrix, "LNC", "adu") == "by_right"
+    assert lookup(matrix, "GI", "adu") == "not_permitted"
+    assert lookup(matrix, "RIV-MU", "adu") == "unknown"
 
 
 def test_lookup_specific_then_family_then_unknown():

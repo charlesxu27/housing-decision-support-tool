@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { buildArea, buildSummary } from '../test/builders'
 import {
   DEFAULT_PRIORITIES,
-  INVALID_PLACE_MESSAGE,
   createPlanningHandoff,
   normalizePlanningAnswers,
   validatePlanningStep,
@@ -34,37 +33,20 @@ const completeAnswers: PlanningAnswers = {
   goal: 'understand_need',
   place: 'muni:wilkinsburg',
   housingTypes: ['small_apartment'],
-  priorities: {
-    ...DEFAULT_PRIORITIES,
-    protectResidents: 90,
-    speedToBuild: 25,
-  },
-  tradeoff: 'Add homes while limiting displacement pressure',
+  priorities: DEFAULT_PRIORITIES,
+  tradeoff: '',
 }
 
 describe('planning wizard logic', () => {
-  it('requires a loaded summary area on the place step', () => {
-    expect(
-      validatePlanningStep(
-        2,
-        { ...completeAnswers, place: 'hood:not-loaded' },
-        summaries,
-      ),
-    ).toContain(INVALID_PLACE_MESSAGE)
-    expect(validatePlanningStep(2, completeAnswers, summaries)).toEqual([])
-  })
+  it('opens the map without a wizard place by using a loaded tract', () => {
+    const handoff = createPlanningHandoff(
+      { ...completeAnswers, place: '' },
+      summaries,
+      areasById,
+    )
 
-  it('rejects priority values outside the supported range', () => {
-    expect(
-      validatePlanningStep(
-        4,
-        {
-          ...completeAnswers,
-          priorities: { ...DEFAULT_PRIORITIES, lowCarbon: 101 },
-        },
-        summaries,
-      ),
-    ).toContain('Priority values must be between 0 and 100.')
+    expect(handoff.configuration.place).toBe(light.id)
+    expect(handoff.summary).toContain('Choose a municipality or neighborhood on the map')
   })
 
   it('resolves the chosen summary to its heaviest member tract', () => {
@@ -76,7 +58,7 @@ describe('planning wizard logic', () => {
       view: 'need',
       dimension: '2d',
     })
-    expect(handoff.weights.protectResidents).toBe(90)
+    expect(handoff.weights).toEqual(DEFAULT_PRIORITIES)
     expect(handoff.summary).toContain('Small apartment building')
     expect(handoff.summary).toContain('Wilkinsburg')
     expect(handoff.summary).toContain('Tract 1412')
@@ -90,7 +72,7 @@ describe('planning wizard logic', () => {
 
   it('requires at least one housing type', () => {
     expect(
-      validatePlanningStep(3, { ...completeAnswers, housingTypes: [] }, summaries),
+      validatePlanningStep(2, { ...completeAnswers, housingTypes: [] }, summaries),
     ).toContain('Choose an option before continuing.')
   })
 
@@ -116,11 +98,33 @@ describe('planning wizard logic', () => {
     ).toEqual(['duplex_triplex'])
   })
 
-  it('does not mutate priority answers while creating the handoff', () => {
+  it('drops previously saved priority sliders', () => {
+    expect(
+      normalizePlanningAnswers({
+        role: 'municipal_staff',
+        priorities: { ...DEFAULT_PRIORITIES, protectResidents: 90 },
+      }).priorities,
+    ).toEqual(DEFAULT_PRIORITIES)
+  })
+
+  it('does not mutate answers while creating the handoff', () => {
     const before = structuredClone(completeAnswers)
 
     createPlanningHandoff(completeAnswers, summaries, areasById)
 
     expect(completeAnswers).toEqual(before)
+  })
+
+  it('opens the map with balanced default weights', () => {
+    const handoff = createPlanningHandoff(
+      {
+        ...completeAnswers,
+        priorities: { ...DEFAULT_PRIORITIES, protectResidents: 90 },
+      },
+      summaries,
+      areasById,
+    )
+
+    expect(handoff.weights).toEqual(DEFAULT_PRIORITIES)
   })
 })

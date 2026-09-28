@@ -228,7 +228,7 @@ export function PlaceReport({
             <dd>{area.parcels.vacant.toLocaleString()}</dd>
           </div>
           <div>
-            <dt>Rehab candidates</dt>
+            <dt>Renovate candidates</dt>
             <dd>{area.parcels.rehabCandidates.toLocaleString()}</dd>
           </div>
           <div>

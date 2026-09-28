@@ -65,6 +65,13 @@ describe('public site routes', () => {
     expect(renderRoute('/')).toContain('href="/plan"')
   })
 
+  it('does not collect priorities in the planning wizard', () => {
+    const markup = renderRoute('/plan')
+    expect(markup).toContain('Step 1 of 3')
+    expect(markup).not.toContain('Priorities')
+    expect(markup).not.toContain('Make the tradeoffs visible.')
+  })
+
   it('renders the not-found page for an unknown route', () => {
     expect(renderRoute('/missing')).toContain(
       'That route is not part of this prototype.',

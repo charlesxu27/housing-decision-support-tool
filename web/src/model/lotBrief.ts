@@ -161,7 +161,7 @@ export function templateLotBrief(card: LotBriefCard): LotBriefNarrative {
       : `The snapshot counts ${card.tract.transitTrips800m.toLocaleString()} weekday scheduled transit trips at stops within 800 m of the tract centroid. That is a tract access measure, not a named nearest stop on this PIN.`,
     equity: `Renter share in the tract is ${pct(card.tract.renterShare)}. Displacement-pressure index is ${card.tract.displacement == null ? 'not published' : card.tract.displacement.toFixed(2)}. Use these as screening for who current stock fails—not as a ranking of people.`,
     climate: `This lot flood overlay: ${card.flood ? 'yes' : 'no'}; floodway: ${card.floodway ? 'yes' : 'no'}; steep slope: ${card.slope}; undermined: ${card.mine}. Tract flood-share is ${pct(card.tract.floodShare)}. Floodway lots are gated before other match colors.`,
-    cost: `The snapshot does not carry a bid or market value. Site flags that usually raise cost: flood ${card.flood ? 'yes' : 'no'}, slope ${card.slope}, undermining ${card.mine}, rehab candidate ${card.rehab ? 'yes' : 'no'}.`,
+    cost: `The snapshot does not carry a bid or market value. Site flags that usually raise cost: flood ${card.flood ? 'yes' : 'no'}, slope ${card.slope}, undermining ${card.mine}, renovate candidate ${card.rehab ? 'yes' : 'no'}.`,
     size: `Lot area is ${Math.round(card.lotSqft).toLocaleString()} sq ft. Current use is ${use}${card.building ? ' with a building' : ' with no building on the assessment'}. Fit flags already apply the type-specific lot rules.`,
     sources_note:
       'All figures are from the published map snapshot (Need / Fit / Allowed). The writeup must not invent zoning sections, unit counts, or dollar amounts.',

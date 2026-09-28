@@ -88,7 +88,7 @@ export const SCENARIO_TEMPLATES: readonly ScenarioTemplate[] = [
     id: 'gentle_density',
     name: 'Gentle density',
     description:
-      'ADUs, duplex homes, and rehabilitation spread across existing blocks.',
+      'ADUs, duplex homes, and renovation spread across existing blocks.',
     mixShares: { adu: 0.25, duplex_triplex: 0.4, rehab_reuse: 0.35 },
     marketRateShare: 0.5,
     carbonKgCo2ePerHome: [95_000, 145_000],

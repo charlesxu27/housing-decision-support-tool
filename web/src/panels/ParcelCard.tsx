@@ -250,7 +250,7 @@ export function ParcelCard({
             <dd>{flag(parcel.mine)}</dd>
           </div>
           <div>
-            <dt>Rehab candidate</dt>
+            <dt>Renovate candidate</dt>
             <dd>{flag(parcel.rehab)}</dd>
           </div>
         </dl>

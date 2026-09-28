@@ -29,6 +29,10 @@ BY_RIGHT, SE, NP, UNK = "by_right", "special_exception", "not_permitted", "unkno
 
 RES_LOW = ["R1D", "R1A", "R2", "R3", "RM", "H", "LNC", "UNC", "NDO", "NDI"]
 NONRES = ["HC", "GT", "GI", "UI", "P"]
+# Districts that already allow a residential primary use in this draft.
+# Pending CB 2025-1545 would allow an ADU as accessory to that use.
+ADU_BY_RIGHT = ["R1D", "R1A", "R2", "R3", "RM", "H", "LNC", "UNC", "NDO", "NDI", "HC", "GT"]
+ADU_NOT_PERMITTED = ["GI", "UI", "P"]
 
 DRAFT: dict[str, dict[str, str]] = {}
 
@@ -68,7 +72,7 @@ for t in ["small_apartment", "large_apartment", "senior_accessible"]:
 # Hillside: detached by right, everything else unknown (handled by default).
 
 NOTES = {
-    "adu": "Draft assumption. 2025 ADU legislation status must be verified before any status other than unknown is entered.",
+    "adu": "Draft from Council Bill 2025-1545 proposed §912.08 (Planning Commission recommended June 2, 2026; held in Council after the Sept 23, 2026 hearing; not enacted). ADUs by right on lots whose primary use is Residential, Community Center, or Religious Assembly.",
     "rehab_reuse": "Draft assumption: by_right wherever detached_sf or duplex_triplex is by_right in this draft; rehab of an existing lawful use is treated as continuing that use.",
     "senior_accessible": "Draft assumption using Multi-Unit Residential as the proxy use.",
     "small_apartment": "Draft assumption using Multi-Unit Residential as the proxy use.",
@@ -96,6 +100,10 @@ def draft_status(code: str, type_id: str) -> str:
     fam = family(code)
     statuses = DRAFT.get(fam, {})
     if type_id == "adu":
+        if fam in ADU_NOT_PERMITTED:
+            return NP
+        if fam in ADU_BY_RIGHT:
+            return BY_RIGHT
         return UNK
     if type_id == "rehab_reuse":
         if statuses.get("detached_sf") == BY_RIGHT or statuses.get("duplex_triplex") == BY_RIGHT:

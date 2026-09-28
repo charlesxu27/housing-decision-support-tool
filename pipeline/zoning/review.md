@@ -31,7 +31,7 @@ reviewer, and the app labels draft rows as "draft, not human-verified".
 | `duplex_triplex` | Two-Unit Residential (three-unit needs its own check) |
 | `small_apartment`, `large_apartment`, `senior_accessible` | Multi-Unit Residential |
 | `rehab_reuse` | `by_right` wherever detached or two-unit is `by_right` in the draft (continuing a lawful use); otherwise `unknown` |
-| `adu` | `unknown` everywhere; the 2025 accessory dwelling unit legislation must be confirmed |
+| `adu` | Drafted from **pending** Council Bill 2025-1545 proposed §912.08 (not enacted as of Sept 27, 2026). By right where this draft already allows a residential primary use (`R1D`, `R1A`, `R2`, `R3`, `RM`, `H`, `LNC`, `UNC`, `NDO`, `NDI`, `HC`, `GT`). Not permitted in `GI`, `UI`, and `P`. Plan-controlled districts stay `unknown`. |
 
 Hillside (`H`) is drafted as detached-only. `RP`, `SP-*`, `RIV-*`, `EMI`,
 `AP`/`CP`, `GPR*`, `UC-*`, `UPR-*`, `R-MU`, and `MTOBOR` are `unknown`.

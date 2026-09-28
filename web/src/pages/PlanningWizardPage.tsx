@@ -1,16 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { DataState } from '../data/DataState'
 import { useSnapshot } from '../data/useSnapshot'
-import { TYPE_IDS, type SummaryArea } from '../data/types'
-import { heaviestMember } from '../model/area'
-import { PlacePicker } from '../panels/PlacePicker'
+import { TYPE_IDS } from '../data/types'
 import {
   GOAL_OPTIONS,
-  PRIORITY_OPTIONS,
   ROLE_OPTIONS,
   createPlanningHandoff,
-  describeHousingTypes,
   validatePlanningStep,
   type GoalId,
   type RoleId,
@@ -33,52 +28,23 @@ const STEPS = [
       'Your goal chooses the first map view. You can switch views at any time.',
   },
   {
-    short: 'Place',
-    title: 'Choose a municipality or neighborhood.',
-    detail:
-      'Municipalities are the cities, boroughs, and townships in Allegheny County. Pittsburgh neighborhoods are areas inside the City of Pittsburgh. Pick one of those two lists, or search within the list you have open. The map opens on the Census tract with the most parcels in that place.',
-  },
-  {
     short: 'Type',
     title: 'Which housing types should we compare?',
     detail:
       'Select one or more. The map opens on the type marked “Starts the map.” You can switch types after the map opens.',
   },
-  {
-    short: 'Priorities',
-    title: 'Make the tradeoffs visible.',
-    detail:
-      'Priorities affect scenario ranking only. They never change map facts or legal status.',
-  },
-  {
-    short: 'Review',
-    title: 'Review your planning lens.',
-    detail:
-      'You can return to any step. Opening the map keeps all controls available.',
-  },
 ] as const
-
-function placeLabel(summary: SummaryArea | undefined) {
-  if (!summary) return 'Not selected'
-  return summary.kind === 'neighborhood'
-    ? `${summary.label}, ${summary.municipality}`
-    : summary.label
-}
 
 export function PlanningWizardPage() {
   const navigate = useNavigate()
   const snapshot = useSnapshot()
-  const { summaries, summariesById, areasById } = snapshot
+  const { summaries, areasById } = snapshot
   const answers = usePlanningStore((state) => state.answers)
   const updateAnswers = usePlanningStore((state) => state.updateAnswers)
   const setHandoff = usePlanningStore((state) => state.setHandoff)
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState<string[]>([])
   const current = STEPS[step]
-  const chosenSummary = summariesById.get(answers.place)
-  const chosenTract = chosenSummary
-    ? heaviestMember(chosenSummary, areasById)
-    : undefined
 
   const continueToNext = () => {
     const nextErrors = validatePlanningStep(step, answers, summaries)
@@ -223,44 +189,6 @@ export function PlanningWizardPage() {
             ) : null}
 
             {step === 2 ? (
-              snapshot.status === 'ready' ? (
-                <div className="option-stack">
-                  <PlacePicker
-                    id="wizard-place"
-                    label="Municipality or Pittsburgh neighborhood"
-                    summaries={summaries}
-                    value={answers.place || null}
-                    displayValue={chosenSummary ? placeLabel(chosenSummary) : ''}
-                    onChange={(summary) => updateAnswers({ place: summary.id })}
-                  />
-                  <p className="wizard-place-note">
-                    Use Municipalities for a city, borough, or township. Use
-                    Pittsburgh neighborhoods for a neighborhood inside the City.
-                    Each list shows every place in that group.
-                  </p>
-                  {chosenSummary ? (
-                    <p className="wizard-place-note">
-                      {chosenSummary.kind === 'neighborhood'
-                        ? 'Pittsburgh neighborhood'
-                        : 'Municipality'}
-                      {' · '}
-                      {chosenSummary.members.length} tract
-                      {chosenSummary.members.length === 1 ? '' : 's'} ·{' '}
-                      {chosenSummary.parcels.toLocaleString()} parcels. The map
-                      opens on{' '}
-                      {chosenTract
-                        ? `${chosenTract.name} (GEOID ${chosenTract.id})`
-                        : 'its largest tract'}
-                      .
-                    </p>
-                  ) : null}
-                </div>
-              ) : (
-                <DataState state={snapshot} subject="the list of places" />
-              )
-            ) : null}
-
-            {step === 3 ? (
               <div className="option-grid housing-option-grid">
                 {TYPE_IDS.map((type) => {
                   const selected = answers.housingTypes.includes(type)
@@ -305,107 +233,6 @@ export function PlanningWizardPage() {
                   )
                 })}
               </div>
-            ) : null}
-
-            {step === 4 ? (
-              <>
-                <div className="priority-list">
-                  {PRIORITY_OPTIONS.map((priority) => (
-                    <label key={priority.key}>
-                      <span>
-                        <strong>{priority.label}</strong>
-                        <output>{answers.priorities[priority.key]}</output>
-                      </span>
-                      <small>{priority.explanation}</small>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="5"
-                        value={answers.priorities[priority.key]}
-                        onChange={(event) =>
-                          updateAnswers({
-                            priorities: {
-                              ...answers.priorities,
-                              [priority.key]: Number(event.target.value),
-                            },
-                          })
-                        }
-                      />
-                    </label>
-                  ))}
-                </div>
-                <label className="text-field">
-                  <span>Tradeoff to keep in view (optional)</span>
-                  <textarea
-                    rows={3}
-                    maxLength={240}
-                    value={answers.tradeoff}
-                    onChange={(event) =>
-                      updateAnswers({ tradeoff: event.target.value })
-                    }
-                    placeholder="For example: add homes without displacing current renters"
-                  />
-                </label>
-              </>
-            ) : null}
-
-            {step === 5 ? (
-              <dl className="review-list">
-                <div>
-                  <dt>Role</dt>
-                  <dd>
-                    {ROLE_OPTIONS.find((option) => option.value === answers.role)
-                      ?.label ?? 'Not selected'}
-                  </dd>
-                  <button type="button" onClick={() => setStep(0)}>
-                    Edit
-                  </button>
-                </div>
-                <div>
-                  <dt>Goal</dt>
-                  <dd>
-                    {GOAL_OPTIONS.find((option) => option.value === answers.goal)
-                      ?.label ?? 'Not selected'}
-                  </dd>
-                  <button type="button" onClick={() => setStep(1)}>
-                    Edit
-                  </button>
-                </div>
-                <div>
-                  <dt>Geography</dt>
-                  <dd>
-                    {placeLabel(chosenSummary)}
-                    {chosenTract ? ` · opens on ${chosenTract.name}` : ''}
-                  </dd>
-                  <button type="button" onClick={() => setStep(2)}>
-                    Edit
-                  </button>
-                </div>
-                <div>
-                  <dt>Housing types</dt>
-                  <dd>
-                    {answers.housingTypes.length > 0
-                      ? describeHousingTypes(answers.housingTypes)
-                      : 'Not selected'}
-                  </dd>
-                  <button type="button" onClick={() => setStep(3)}>
-                    Edit
-                  </button>
-                </div>
-                <div>
-                  <dt>Priority range</dt>
-                  <dd>
-                    {Math.min(...Object.values(answers.priorities))}–{Math.max(
-                      ...Object.values(answers.priorities),
-                    )}{' '}
-                    out of 100
-                  </dd>
-                  <button type="button" onClick={() => setStep(4)}>
-                    Edit
-                  </button>
-                </div>
-              </dl>
             ) : null}
           </div>
 

@@ -1,3 +1,4 @@
+import { applyLenientFitBands, applyLenientNeedBands } from '../model/needBands'
 import { z } from 'zod'
 import {
   TYPE_IDS,
@@ -453,6 +454,8 @@ export function buildSnapshot(
   metrics: AreaMetricsFile,
   zoningMatrix: ZoningMatrix,
 ): Snapshot {
+  applyLenientNeedBands(metrics.areas)
+  applyLenientFitBands(metrics.areas)
   const areasById = new Map(metrics.areas.map((area) => [area.id, area]))
   if (areasById.size !== metrics.areas.length) {
     throw new DataLoadError(

@@ -36,7 +36,7 @@ export const COPILOT_KNOWLEDGE: readonly KnowledgeSnippet[] = [
     label: 'Method: Need · Fit · Allowed',
     title: 'Three distinct planning questions',
     text:
-      'Need compares who lives in a tract with the homes that exist there: household sizes against bedroom counts, seniors living alone, cost-burdened renters, overcrowding, and vacancy, scored against county tertiles. Fit counts parcels that pass a size, use, building, transit, and hazard rule for each housing type and reports a homes-possible range. Allowed summarizes the zoning status covering most residential-capable parcels. A match combines these in a fixed order but does not replace feasibility, market, legal, or community review.',
+      'Need compares who lives in a tract with the homes that exist there: household sizes against bedroom counts, seniors living alone, cost-burdened renters, overcrowding, and vacancy. Scores come from the American Community Survey and are ranked within Allegheny County. Low need is the lowest 10% of scores for that housing type. Fit counts parcels that pass a size, use, building, transit, and hazard rule for each housing type and reports a homes-possible range. Allowed summarizes the zoning status covering most residential-capable parcels. A match combines these in a fixed order but does not replace feasibility, market, legal, or community review.',
     keywords: [
       'need',
       'demand',

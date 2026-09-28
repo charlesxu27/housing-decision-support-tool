@@ -7,7 +7,7 @@ export const TYPE_LABELS: Record<TypeId, string> = {
   small_apartment: 'Small apartment building',
   large_apartment: 'Mid-size / large apartments',
   senior_accessible: 'Senior / accessible housing',
-  rehab_reuse: 'Rehab & reuse of vacant homes',
+  rehab_reuse: 'Renovate & reuse of vacant homes',
   detached_sf: 'Detached single-family',
 }
 

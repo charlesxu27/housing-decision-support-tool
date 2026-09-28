@@ -54,19 +54,16 @@ export function LandingPage() {
           <li>
             <span>1</span>
             <h3>Describe the decision</h3>
-            <p>Choose a goal, a municipality or neighborhood, and a housing type.</p>
+            <p>Choose a role, a goal, and one or more housing types.</p>
           </li>
           <li>
             <span>2</span>
-            <h3>Name your priorities</h3>
-            <p>
-              Make tradeoffs visible without changing household, site, hazard,
-              or zoning facts.
-            </p>
+            <h3>Open the configured map</h3>
+            <p>Pick a municipality or neighborhood on the map when it opens.</p>
           </li>
           <li>
             <span>3</span>
-            <h3>Read the configured map</h3>
+            <h3>Inspect the evidence</h3>
             <p>
               Compare need, fit, and allowance; then open details and scenario
               tools when you need them.

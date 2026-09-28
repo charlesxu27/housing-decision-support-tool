@@ -2305,43 +2305,6 @@ summary:focus-visible {
   font-size: 9px;
 }
 
-.priority-list {
-  display: grid;
-  gap: 12px;
-}
-
-.priority-list > label {
-  padding: 14px 16px;
-  background: #f7f8f4;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-}
-
-.priority-list label > span {
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-  font-size: 12px;
-}
-
-.priority-list output {
-  color: var(--green);
-  font-weight: 800;
-}
-
-.priority-list small {
-  display: block;
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.priority-list input {
-  width: 100%;
-  margin: 11px 0 0;
-  accent-color: var(--green);
-}
-
 .review-list {
   margin: 0;
   border: 1px solid var(--line);

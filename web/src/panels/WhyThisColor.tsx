@@ -11,6 +11,7 @@ import {
   type MatchCheckId,
   type MatchCheckOutcome,
 } from '../model/match'
+import { describeNeedScore, describeSmallHouseholdGap } from '../model/needBands'
 import { pct } from '../shared/format'
 import { STATUS_LABELS } from '../shared/labels'
 import type { MapMode } from '../shared/mapState'
@@ -36,7 +37,7 @@ const STATUS_VERDICTS: Record<MatchStatus, string> = {
   blocked_by_zoning:
     'Need and site fit line up, but current zoning does not permit this type.',
   needed_but_hard:
-    'Local need is there, but few sites fit, so zoning was not evaluated.',
+    'Local need is there, but no lots pass the fit rule, so zoning was not evaluated.',
   low_priority:
     'Local need for this type is low, so site fit and zoning were not evaluated.',
   zoning_unknown:
@@ -128,9 +129,9 @@ function checkMetrics(
       ]
     case 'need': {
       const metrics = [
-        `1–2 person households ${pct(area.households.hh_1_2)} vs. 0–1 bedroom homes ${pct(area.stock.br_0_1)}`,
+        describeSmallHouseholdGap(area),
         `Cost-burdened renters: ${pct(area.households.cost_burdened_renters)}`,
-        `Need score: ${area.needScores[type] == null ? 'not available' : area.needScores[type]!.toFixed(2)} (county tertiles set the band)`,
+        describeNeedScore(area.needScores[type]),
       ]
       if (type === 'senior_accessible') {
         metrics.push(`Seniors living alone: ${pct(area.households.senior_alone)}`)
@@ -171,6 +172,11 @@ function checkMetrics(
           ? 'Pittsburgh matrix is draft, not human-verified.'
           : 'Pittsburgh matrix rows are human-verified.',
       )
+      if (type === 'adu') {
+        metrics.push(
+          'ADU rows follow pending Council Bill 2025-1545 proposed §912.08, not an adopted ordinance.',
+        )
+      }
       return metrics
     }
   }

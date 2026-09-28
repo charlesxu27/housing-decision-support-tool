@@ -37,7 +37,7 @@ const TYPE_LABELS: Record<TypeId, string> = {
   small_apartment: 'small apartment',
   large_apartment: 'large apartment',
   senior_accessible: 'senior-accessible housing',
-  rehab_reuse: 'rehabilitation or reuse',
+  rehab_reuse: 'renovate or reuse',
   detached_sf: 'detached single-family housing',
 }
 

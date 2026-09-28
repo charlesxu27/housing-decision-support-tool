@@ -15,6 +15,7 @@ import {
   type MatchCheckId,
   type MatchCheckOutcome,
 } from './match'
+import { describeNeedScore, describeSmallHouseholdGap } from './needBands'
 
 /**
  * Lot-size and transit thresholds copied from `pipeline/config/model.yaml`.
@@ -179,12 +180,12 @@ function fitBlocker(parcel: ParcelTileProperties, type: TypeId): string {
       return 'Vacant lot meets the size minimum, but the recorded fit flag fails.'
     case 'rehab_reuse':
       if (parcel.bldg !== 1) {
-        return 'Rehab is screened on lots with a building. This lot has none.'
+        return 'Renovation is screened on lots with a building. This lot has none.'
       }
       if (parcel.rehab !== 1) {
-        return 'The building is not on the condemned, city-owned, or tax-delinquent lists used for rehab.'
+        return 'The building is not on the condemned, city-owned, or tax-delinquent lists used for renovation.'
       }
-      return 'Building and rehab flags look eligible, but the recorded fit flag fails.'
+      return 'Building and renovation flags look eligible, but the recorded fit flag fails.'
     case 'senior_accessible':
       if (parcel.lot < LOT.senior) {
         return `The lot is ${sqft(parcel.lot)}, under the ${LOT.senior.toLocaleString()} sq ft minimum for senior housing.`
@@ -222,7 +223,7 @@ function fitMetrics(parcel: ParcelTileProperties, type: TypeId): string[] {
       ? 'This lot passed the fit rule when the snapshot was built.'
       : fitBlocker(parcel, type),
     `Use: ${landUseLabel(parcel)}. Lot: ${sqft(parcel.lot)}. Building: ${parcel.bldg === 1 ? 'yes' : 'no'}.`,
-    `Steep slope: ${covered(parcel.slope)}. Undermined: ${covered(parcel.mine)}. Rehab candidate: ${covered(parcel.rehab)}.`,
+    `Steep slope: ${covered(parcel.slope)}. Undermined: ${covered(parcel.mine)}. Renovate candidate: ${covered(parcel.rehab)}.`,
     FIT_RULES[type],
   ]
 }
@@ -230,9 +231,9 @@ function fitMetrics(parcel: ParcelTileProperties, type: TypeId): string[] {
 function needMetrics(area: AreaRecord, type: TypeId): string[] {
   const metrics = [
     'Need is scored for the whole tract. Census does not publish it for one lot.',
-    `1–2 person households ${pctShare(area.households.hh_1_2)} vs. 0–1 bedroom homes ${pctShare(area.stock.br_0_1)}.`,
+    `${describeSmallHouseholdGap(area)}.`,
     `Cost-burdened renters: ${pctShare(area.households.cost_burdened_renters)}.`,
-    `Need score: ${area.needScores[type] == null ? 'not available' : area.needScores[type]!.toFixed(2)} (county tertiles set the band).`,
+    `${describeNeedScore(area.needScores[type])}.`,
   ]
   if (area.moeFlags.length > 0) {
     metrics.push(
