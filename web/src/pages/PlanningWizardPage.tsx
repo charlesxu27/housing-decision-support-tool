@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DataState } from '../data/DataState'
 import { useSnapshot } from '../data/useSnapshot'
-import { TYPE_IDS, type SummaryArea, type TypeId } from '../data/types'
+import { TYPE_IDS, type SummaryArea } from '../data/types'
 import { heaviestMember } from '../model/area'
 import { PlacePicker } from '../panels/PlacePicker'
 import {
@@ -10,6 +10,7 @@ import {
   PRIORITY_OPTIONS,
   ROLE_OPTIONS,
   createPlanningHandoff,
+  describeHousingTypes,
   validatePlanningStep,
   type GoalId,
   type RoleId,
@@ -35,13 +36,13 @@ const STEPS = [
     short: 'Place',
     title: 'Choose a municipality or neighborhood.',
     detail:
-      'The map opens on the Census tract holding the most parcels in that place. You can move to any tract afterwards.',
+      'Municipalities are the cities, boroughs, and townships in Allegheny County. Pittsburgh neighborhoods are areas inside the City of Pittsburgh. Pick one of those two lists, or search within the list you have open. The map opens on the Census tract with the most parcels in that place.',
   },
   {
     short: 'Type',
-    title: 'Which housing type should lead?',
+    title: 'Which housing types should we compare?',
     detail:
-      'The map will start by comparing need, fit, and allowance for this type.',
+      'Select one or more. The map opens on the type marked “Starts the map.” You can switch types after the map opens.',
   },
   {
     short: 'Priorities',
@@ -232,8 +233,17 @@ export function PlanningWizardPage() {
                     displayValue={chosenSummary ? placeLabel(chosenSummary) : ''}
                     onChange={(summary) => updateAnswers({ place: summary.id })}
                   />
+                  <p className="wizard-place-note">
+                    Use Municipalities for a city, borough, or township. Use
+                    Pittsburgh neighborhoods for a neighborhood inside the City.
+                    Each list shows every place in that group.
+                  </p>
                   {chosenSummary ? (
                     <p className="wizard-place-note">
+                      {chosenSummary.kind === 'neighborhood'
+                        ? 'Pittsburgh neighborhood'
+                        : 'Municipality'}
+                      {' · '}
                       {chosenSummary.members.length} tract
                       {chosenSummary.members.length === 1 ? '' : 's'} ·{' '}
                       {chosenSummary.parcels.toLocaleString()} parcels. The map
@@ -243,14 +253,7 @@ export function PlanningWizardPage() {
                         : 'its largest tract'}
                       .
                     </p>
-                  ) : (
-                    <p className="wizard-place-note">
-                      {snapshot.manifest?.counts.municipalities ?? summaries.length}{' '}
-                      municipalities and{' '}
-                      {snapshot.manifest?.counts.neighborhoods ?? 0} Pittsburgh
-                      neighborhoods are available.
-                    </p>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <DataState state={snapshot} subject="the list of places" />
@@ -259,20 +262,48 @@ export function PlanningWizardPage() {
 
             {step === 3 ? (
               <div className="option-grid housing-option-grid">
-                {TYPE_IDS.map((type) => (
-                  <label className="option-card" key={type}>
-                    <input
-                      type="radio"
-                      name="housing-type"
-                      value={type}
-                      checked={answers.housingType === type}
-                      onChange={() =>
-                        updateAnswers({ housingType: type as TypeId })
-                      }
-                    />
-                    <span>{TYPE_LABELS[type]}</span>
-                  </label>
-                ))}
+                {TYPE_IDS.map((type) => {
+                  const selected = answers.housingTypes.includes(type)
+                  const lead = answers.housingTypes[0] === type
+                  return (
+                    <div className="option-card" key={type}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          name="housing-types"
+                          value={type}
+                          checked={selected}
+                          onChange={() => {
+                            const housingTypes = selected
+                              ? answers.housingTypes.filter((item) => item !== type)
+                              : [...answers.housingTypes, type]
+                            updateAnswers({ housingTypes })
+                          }}
+                        />
+                        <span>
+                          {TYPE_LABELS[type]}
+                          {lead ? <small>Starts the map</small> : null}
+                        </span>
+                      </label>
+                      {selected && answers.housingTypes.length > 1 && !lead ? (
+                        <button
+                          className="option-card__lead"
+                          type="button"
+                          onClick={() =>
+                            updateAnswers({
+                              housingTypes: [
+                                type,
+                                ...answers.housingTypes.filter((item) => item !== type),
+                              ],
+                            })
+                          }
+                        >
+                          Start map here
+                        </button>
+                      ) : null}
+                    </div>
+                  )
+                })}
               </div>
             ) : null}
 
@@ -352,10 +383,10 @@ export function PlanningWizardPage() {
                   </button>
                 </div>
                 <div>
-                  <dt>Housing type</dt>
+                  <dt>Housing types</dt>
                   <dd>
-                    {answers.housingType
-                      ? TYPE_LABELS[answers.housingType]
+                    {answers.housingTypes.length > 0
+                      ? describeHousingTypes(answers.housingTypes)
                       : 'Not selected'}
                   </dd>
                   <button type="button" onClick={() => setStep(3)}>

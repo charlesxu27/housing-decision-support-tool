@@ -1,4 +1,4 @@
-import type { AreaRecord, SummaryArea, TypeId } from '../data/types'
+import { TYPE_IDS, type AreaRecord, type SummaryArea, type TypeId } from '../data/types'
 import { heaviestMember } from '../model/area'
 import type { ValueWeights } from '../panels/ScenarioBuilder'
 import type { MapConfiguration } from '../shared/mapState'
@@ -30,7 +30,8 @@ export interface PlanningAnswers {
   goal: GoalId | ''
   /** Municipality or neighborhood `SummaryArea.id` chosen in the wizard. */
   place: string
-  housingType: TypeId | ''
+  /** Selected housing types. The first entry is the type the map opens on. */
+  housingTypes: TypeId[]
   priorities: ValueWeights
   tradeoff: string
 }
@@ -55,7 +56,7 @@ export const EMPTY_PLANNING_ANSWERS: PlanningAnswers = {
   context: '',
   goal: '',
   place: '',
-  housingType: '',
+  housingTypes: [],
   priorities: DEFAULT_PRIORITIES,
   tradeoff: '',
 }
@@ -96,7 +97,7 @@ const REQUIRED_BY_STEP: Array<Array<keyof PlanningAnswers>> = [
   ['role'],
   ['goal'],
   ['place'],
-  ['housingType'],
+  ['housingTypes'],
   ['priorities'],
   [],
 ]
@@ -113,7 +114,9 @@ export function validatePlanningStep(
   const required = REQUIRED_BY_STEP[step] ?? []
 
   for (const field of required) {
-    if (!answers[field]) errors.push(`Choose an option before continuing.`)
+    const value = answers[field]
+    const missing = Array.isArray(value) ? value.length === 0 : !value
+    if (missing) errors.push('Choose an option before continuing.')
   }
 
   if (step === 2 && !validPlaces.some((place) => place.id === answers.place)) {
@@ -142,8 +145,9 @@ export function createPlanningHandoff(
   summaries: readonly SummaryArea[],
   areasById: ReadonlyMap<string, AreaRecord>,
 ): PlanningHandoff {
+  const leadType = answers.housingTypes[0]
   const summary = summaries.find((candidate) => candidate.id === answers.place)
-  if (!summary || !answers.role || !answers.goal || !answers.housingType) {
+  if (!summary || !answers.role || !answers.goal || !leadType) {
     throw new Error('Planning answers are incomplete.')
   }
 
@@ -158,11 +162,39 @@ export function createPlanningHandoff(
     answers,
     configuration: {
       place: tract.id,
-      type: answers.housingType,
+      type: leadType,
       view: answers.goal === 'understand_need' ? 'need' : 'match',
       dimension: '2d',
     },
     weights: { ...answers.priorities },
-    summary: `${goal?.label ?? 'Planning'} for ${TYPE_LABELS[answers.housingType]} in ${summary.label}, starting from ${tract.name}. Scenario rankings reflect the priorities you selected; map facts do not change.`,
+    summary: `${goal?.label ?? 'Planning'} for ${describeHousingTypes(answers.housingTypes)} in ${summary.label}, starting from ${tract.name}. Scenario rankings reflect the priorities you selected; map facts do not change.`,
+  }
+}
+
+export function describeHousingTypes(types: readonly TypeId[]): string {
+  const labels = types.map((type) => TYPE_LABELS[type])
+  if (labels.length <= 1) return labels[0] ?? 'a housing type'
+  return `${labels.join(', ')}. The map starts on ${labels[0]}`
+}
+
+/** Reads current answers and older saved answers that stored one housing type. */
+export function normalizePlanningAnswers(value: unknown): PlanningAnswers {
+  const raw = (value && typeof value === 'object' ? value : {}) as Partial<PlanningAnswers> & {
+    housingType?: TypeId | ''
+  }
+  const fromList = Array.isArray(raw.housingTypes)
+    ? raw.housingTypes.filter((type): type is TypeId => TYPE_IDS.includes(type))
+    : []
+  const legacy =
+    raw.housingType && TYPE_IDS.includes(raw.housingType) ? [raw.housingType] : []
+
+  return {
+    role: raw.role ?? '',
+    context: raw.context ?? '',
+    goal: raw.goal ?? '',
+    place: raw.place ?? '',
+    housingTypes: fromList.length > 0 ? fromList : legacy,
+    priorities: { ...DEFAULT_PRIORITIES, ...raw.priorities },
+    tradeoff: raw.tradeoff ?? '',
   }
 }

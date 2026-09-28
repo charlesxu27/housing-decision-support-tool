@@ -4,6 +4,7 @@ import {
   DEFAULT_PRIORITIES,
   INVALID_PLACE_MESSAGE,
   createPlanningHandoff,
+  normalizePlanningAnswers,
   validatePlanningStep,
   type PlanningAnswers,
 } from './planning'
@@ -32,7 +33,7 @@ const completeAnswers: PlanningAnswers = {
   context: 'Housing strategy workshop',
   goal: 'understand_need',
   place: 'muni:wilkinsburg',
-  housingType: 'small_apartment',
+  housingTypes: ['small_apartment'],
   priorities: {
     ...DEFAULT_PRIORITIES,
     protectResidents: 90,
@@ -85,6 +86,34 @@ describe('planning wizard logic', () => {
     expect(() =>
       createPlanningHandoff(completeAnswers, summaries, new Map()),
     ).toThrow('Wilkinsburg')
+  })
+
+  it('requires at least one housing type', () => {
+    expect(
+      validatePlanningStep(3, { ...completeAnswers, housingTypes: [] }, summaries),
+    ).toContain('Choose an option before continuing.')
+  })
+
+  it('opens the map on the first selected housing type', () => {
+    const handoff = createPlanningHandoff(
+      { ...completeAnswers, housingTypes: ['adu', 'small_apartment'] },
+      summaries,
+      areasById,
+    )
+
+    expect(handoff.configuration.type).toBe('adu')
+    expect(handoff.summary).toContain('Accessory dwelling unit (ADU)')
+    expect(handoff.summary).toContain('Small apartment building')
+    expect(handoff.summary).toContain('The map starts on Accessory dwelling unit (ADU)')
+  })
+
+  it('keeps a previously saved single housing type', () => {
+    expect(
+      normalizePlanningAnswers({
+        role: 'municipal_staff',
+        housingType: 'duplex_triplex',
+      }).housingTypes,
+    ).toEqual(['duplex_triplex'])
   })
 
   it('does not mutate priority answers while creating the handoff', () => {

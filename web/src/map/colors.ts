@@ -12,7 +12,8 @@ export const STATUS_COLORS: Record<MatchStatus, [number, number, number]> = {
   low_priority: [173, 181, 189],
   zoning_unknown: [92, 101, 110],
   not_recommended: [194, 63, 63],
-  insufficient_data: [168, 132, 98],
+  /** Same gray as zoning unknown: missing facts share that map category. */
+  insufficient_data: [92, 101, 110],
 }
 
 export const NEED_COLORS: Record<string, [number, number, number]> = {

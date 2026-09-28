@@ -14,7 +14,7 @@ vi.mock('./planning/store', () => {
       context: '',
       goal: '',
       place: '',
-      housingType: '',
+      housingTypes: [],
       priorities: {
         protectResidents: 50,
         lowCarbon: 50,

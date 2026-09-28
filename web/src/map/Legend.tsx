@@ -11,7 +11,6 @@ const MATCH_ORDER: readonly MatchStatus[] = [
   'low_priority',
   'zoning_unknown',
   'not_recommended',
-  'insufficient_data',
 ]
 
 const NEED_ORDER = ['high', 'medium', 'low', 'uncertain'] as const
@@ -26,12 +25,9 @@ const NEED_LABELS: Record<(typeof NEED_ORDER)[number], string> = {
 export function Legend({ mode }: { mode: MapMode }) {
   const items =
     mode === 'match'
-      ? [
-          ...MATCH_ORDER.map(
-            (status) => [rgbCss(STATUS_COLORS[status]), STATUS_LABELS[status]] as const,
-          ),
-          [rgbCss(EMPTY_TRACT_RGB), 'No loaded tracts'] as const,
-        ]
+      ? MATCH_ORDER.map(
+          (status) => [rgbCss(STATUS_COLORS[status]), STATUS_LABELS[status]] as const,
+        )
       : [
           ...NEED_ORDER.map(
             (band) => [rgbCss(NEED_COLORS[band]!), NEED_LABELS[band]] as const,
@@ -52,6 +48,12 @@ export function Legend({ mode }: { mode: MapMode }) {
         The color is the check that settled the result. Later checks stay on
         the card, but they do not recolor the tract or parcel.
       </p>
+      {mode === 'match' ? (
+        <p className="legend-note">
+          Zoning unknown also covers a missing required fact and tracts that
+          are not in the loaded snapshot.
+        </p>
+      ) : null}
       <p className="legend-note">
         Boundaries change as you zoom: municipalities and neighborhoods →
         Census tracts → parcels. Summary areas fade when no single result

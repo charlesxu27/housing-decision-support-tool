@@ -72,7 +72,11 @@ const MAP_STYLE =
 export const SUMMARY_MAX_ZOOM = 11.5
 /** From here parcels are drawn from the vector tiles; tracts become outlines. */
 export const PARCEL_MIN_ZOOM = 14
-const NO_DATA: Rgba = [...EMPTY_TRACT_RGB, 220]
+
+function emptyFill(mode: MapMode, alpha: number): Rgba {
+  const rgb = mode === 'match' ? STATUS_COLORS.zoning_unknown : EMPTY_TRACT_RGB
+  return [rgb[0], rgb[1], rgb[2], alpha]
+}
 const CITY_NAMES = new Set(['pittsburgh', 'city of pittsburgh'])
 
 type OverlayId = 'flood' | 'transit' | 'zoning'
@@ -105,7 +109,7 @@ function asFeatureCollection<P extends Record<string, unknown>>(
 }
 
 function paletteColor(value: string | null, mode: MapMode, alpha: number): Rgba {
-  if (value == null) return NO_DATA
+  if (value == null) return emptyFill(mode, alpha)
   const palette: Record<string, [number, number, number]> =
     mode === 'match' ? STATUS_COLORS : NEED_COLORS
   const fallback =
@@ -264,7 +268,7 @@ export function MapView({
       filled: true,
       getFillColor: (feature) => {
         const breakdown = breakdowns.get(feature.properties.id)
-        if (!breakdown || breakdown.plurality == null) return NO_DATA
+        if (!breakdown || breakdown.plurality == null) return emptyFill(mode, 220)
         return paletteColor(
           breakdown.plurality,
           mode,

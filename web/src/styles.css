@@ -1195,7 +1195,7 @@ input:focus-visible {
 }
 
 .status-insufficient_data {
-  background: #a88462;
+  background: #5c656e;
 }
 
 .unknowns-card ul {
@@ -2962,26 +2962,59 @@ summary:focus-visible {
   line-height: 40px;
 }
 
-.place-picker__list {
+.place-picker__filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.place-picker__filters button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+
+.place-picker__filters button[aria-selected='true'] {
+  background: var(--green-pale);
+  border-color: #77a997;
+  box-shadow: inset 3px 0 var(--green);
+}
+
+.place-picker__filters button small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.place-picker__panel {
   position: absolute;
   z-index: 30;
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  max-height: 320px;
-  overflow-y: auto;
-  margin: 0;
-  padding: 6px;
-  list-style: none;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 10px;
   box-shadow: 0 14px 40px rgba(31, 51, 42, 0.16);
 }
 
-.place-picker__list ul {
+.place-picker__list {
+  max-height: 320px;
+  overflow-y: auto;
   margin: 0;
-  padding: 0;
+  padding: 6px;
   list-style: none;
 }
 
@@ -3023,6 +3056,52 @@ summary:focus-visible {
   padding: 10px;
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.45;
+}
+
+.place-picker__switch {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--green-pale);
+  color: var(--green-dark);
+  font-size: 12px;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option-card__lead {
+  margin-left: auto;
+  flex: none;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: white;
+  color: var(--green-dark);
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.housing-option-grid .option-card > label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.housing-option-grid .option-card span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 720;
 }
 
 .wizard-place-note {
