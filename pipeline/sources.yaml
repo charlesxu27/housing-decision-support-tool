@@ -1,0 +1,331 @@
+# Pinned public sources for the housing decision support snapshot.
+#
+# Every entry carries the fields exported to `manifest.sources` (id, title,
+# publisher, catalogUrl, resourceUrl, geography, vintage, license,
+# fieldsRetained, notes) plus a `fetch` block that tells
+# `hdst_pipeline.sources` how to download it into data/raw/<id>/.
+# Retrieval time and sha256 are recorded at fetch time in data/raw/fetch_log.json.
+
+sources:
+  - id: acs5
+    title: ACS 5-year 2020-2024 table-based summary files (tract)
+    publisher: U.S. Census Bureau
+    catalogUrl: https://www.census.gov/programs-surveys/acs/data/summary-file.html
+    resourceUrl: https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/
+    geography: Census tracts, Allegheny County PA (GEO_ID 1400000US42003*) plus county row 0500000US42003
+    vintage: ACS 5-year 2020-2024 (released 2025-12)
+    license: Public domain (U.S. federal government work)
+    fieldsRetained:
+      - GEO_ID
+      - B11016 (household size)
+      - B11007 (65+ living alone)
+      - B25003 (tenure)
+      - B25002 (occupancy)
+      - B25004 (vacancy status)
+      - B25014 (occupants per room)
+      - B25024 (units in structure)
+      - B25041 (bedrooms)
+      - B25070 (gross rent as share of income)
+      - B19013 (median household income)
+      - B25064 (median gross rent)
+    notes: >-
+      Pipe-delimited national files (one per table); filtered to Allegheny County
+      rows at build time. Margins of error (M columns) feed the reliability flags.
+    fetch:
+      kind: acs_tables
+      tables: [B11016, B11007, B25003, B25002, B25004, B25014, B25024, B25041, B25070, B19013, B25064]
+      urlTemplate: https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/acsdt5y2024-{table_lower}.dat
+
+  - id: tiger_tracts
+    title: TIGER/Line 2024 Census tracts, Pennsylvania
+    publisher: U.S. Census Bureau
+    catalogUrl: https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html
+    resourceUrl: https://www2.census.gov/geo/tiger/TIGER2024/TRACT/tl_2024_42_tract.zip
+    geography: Census tracts, Pennsylvania (filtered to COUNTYFP 003)
+    vintage: TIGER/Line 2024 (2020 tract definitions, matches ACS 2020-2024)
+    license: Public domain (U.S. federal government work)
+    fieldsRetained: [GEOID, NAME, geometry]
+    notes: Analysis-area polygons; simplified to ~5 m for the browser.
+    fetch:
+      kind: http
+      url: https://www2.census.gov/geo/tiger/TIGER2024/TRACT/tl_2024_42_tract.zip
+      filename: tl_2024_42_tract.zip
+      fallbackUrl: https://www2.census.gov/geo/tiger/TIGER2023/TRACT/tl_2023_42_tract.zip
+      fallbackFilename: tl_2023_42_tract.zip
+
+  - id: chas
+    title: HUD CHAS 2018-2022 tract tables (optional, user-supplied)
+    publisher: U.S. Department of Housing and Urban Development
+    catalogUrl: https://www.huduser.gov/portal/datasets/cp.html
+    resourceUrl: https://www.huduser.gov/portal/datasets/cp/2018thru2022-140-csv.zip
+    geography: Census tracts, national (filtered to Allegheny County)
+    vintage: CHAS 2018-2022
+    license: Public domain (U.S. federal government work)
+    fieldsRetained: [geoid, Table 7 renter cost-burden cells by income band]
+    notes: >-
+      HUD's download is behind a bot check (HTTP 202). Place the zip under
+      data/raw/chas/ manually; when absent the ACS B25070 renter burden share is
+      used for `cost_burdened_renters` and this source is marked unavailable.
+    fetch:
+      kind: local_optional
+      pattern: "*.zip"
+
+  - id: parcels
+    title: Allegheny County Parcel Boundaries
+    publisher: Allegheny County (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/allegheny-county-parcel-boundaries1
+    resourceUrl: https://data.wprdc.org/dataset/709e4e52-6f82-4cd0-a848-f3e2b3f5d22b/resource/be216088-d51c-41ce-aa4a-2c315c2c7725/download/alleghenycounty_parcels202609.zip
+    geography: Parcels, Allegheny County PA
+    vintage: September 2026 (resource alleghenycounty_parcels202609)
+    license: License not specified on WPRDC (county open data)
+    fieldsRetained: [PIN, geometry]
+    notes: Shapefile; only PIN and geometry are read.
+    fetch:
+      kind: http
+      url: https://data.wprdc.org/dataset/709e4e52-6f82-4cd0-a848-f3e2b3f5d22b/resource/be216088-d51c-41ce-aa4a-2c315c2c7725/download/alleghenycounty_parcels202609.zip
+      filename: alleghenycounty_parcels202609.zip
+
+  - id: assessments
+    title: Allegheny County Property Assessments
+    publisher: Allegheny County Office of Property Assessments (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/property-assessments
+    resourceUrl: https://data.wprdc.org/dataset/2b3df818-601e-4f06-b150-643557229491/resource/9a1c60bd-f9f7-4aba-aeb7-af8c3aaa44e5/download/assessments.csv
+    geography: Parcels, Allegheny County PA
+    vintage: Tax year 2026, as of 2026-09-01 (resource last modified 2026-09-07)
+    license: Creative Commons CCZero
+    fieldsRetained: [PARID, MUNICODE, CLASS, USECODE, USEDESC, LOTAREA, COUNTYBUILDING, FINISHEDLIVINGAREA, YEARBLT, BEDROOMS]
+    notes: >-
+      Owner names, mailing/change-notice addresses, and sale details are never
+      read (usecols at read time) and never exported.
+    fetch:
+      kind: http
+      url: https://data.wprdc.org/dataset/2b3df818-601e-4f06-b150-643557229491/resource/9a1c60bd-f9f7-4aba-aeb7-af8c3aaa44e5/download/assessments.csv
+      filename: assessments.csv
+
+  - id: delinquency
+    title: Delinquent County Real Estate Taxes (cumulative)
+    publisher: Allegheny County Treasurer (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/delinquent-real-estate-taxes
+    resourceUrl: https://data.wprdc.org/datastore/dump/96e9d6b2-3e1a-4a0c-8ef6-23a049c263d8
+    geography: Parcels, Allegheny County PA
+    vintage: As of 2026-09-26 (daily refresh)
+    license: Creative Commons CCZero
+    fieldsRetained: [parcel_id, year]
+    notes: A parcel is a rehab candidate when it appears with any delinquent year.
+    fetch:
+      kind: http
+      url: https://data.wprdc.org/datastore/dump/96e9d6b2-3e1a-4a0c-8ef6-23a049c263d8
+      filename: delinquency.csv
+
+  - id: condemned
+    title: Condemned and Dead-End Properties
+    publisher: City of Pittsburgh, Permits Licenses and Inspections (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/condemned-properties
+    resourceUrl: https://data.wprdc.org/datastore/dump/0a963f26-eb4b-4325-bbbc-3ddf6a871410
+    geography: Parcels, City of Pittsburgh
+    vintage: As of 2026-09-27 (daily refresh)
+    license: Creative Commons Attribution
+    fieldsRetained: [parcel_id, inspection_status]
+    notes: Owner column is never read.
+    fetch:
+      kind: http
+      url: https://data.wprdc.org/datastore/dump/0a963f26-eb4b-4325-bbbc-3ddf6a871410
+      filename: condemned.csv
+
+  - id: city_owned
+    title: City-Owned Properties
+    publisher: City of Pittsburgh, Department of Finance (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/city-owned-properties
+    resourceUrl: https://data.wprdc.org/datastore/dump/e1dcee82-9179-4306-8167-5891915b62a7
+    geography: Parcels, City of Pittsburgh
+    vintage: As of 2026-09-27 (daily refresh)
+    license: Creative Commons Attribution
+    fieldsRetained: [pin, inventory_type, current_status]
+    notes: ""
+    fetch:
+      kind: http
+      url: https://data.wprdc.org/datastore/dump/e1dcee82-9179-4306-8167-5891915b62a7
+      filename: city_owned.csv
+
+  - id: zoning
+    title: Pittsburgh Zoning Districts
+    publisher: City of Pittsburgh, Department of City Planning (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/zoning
+    resourceUrl: https://data.wprdc.org/dataset/01773197-baba-4f5e-aa77-ae87a04afafc/resource/6127f35e-f36b-4a53-80b3-f4409609e9df/download/zoning.geojson
+    geography: Base zoning districts, City of Pittsburgh
+    vintage: Resource last modified 2026-09-23
+    license: License not specified on WPRDC (city open data)
+    fieldsRetained: [zon_new, full_zoning_type, legendtype, geometry]
+    notes: District code is `zon_new`; the matrix keys on it with a family fallback (e.g. R1D-L -> R1D).
+    fetch:
+      kind: http
+      url: https://data.wprdc.org/dataset/01773197-baba-4f5e-aa77-ae87a04afafc/resource/6127f35e-f36b-4a53-80b3-f4409609e9df/download/zoning.geojson
+      filename: zoning.geojson
+
+  - id: municipalities
+    title: Allegheny County Municipal Boundaries
+    publisher: Allegheny County Division of Computer Services, Geographic Information Systems Group (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/allegheny-county-municipal-boundaries
+    resourceUrl: https://data.wprdc.org/dataset/2fa577d6-1a6b-46a8-8165-27fecac1dee5/resource/b0cb0249-d1ba-45b7-9918-dc86fa8af04c/download/muni_boundaries.geojson
+    geography: 130 municipalities, Allegheny County PA
+    vintage: Resource last modified 2026-08-30
+    license: License not specified on WPRDC (county open data)
+    fieldsRetained: [name, label, type, fips, municode, geometry]
+    notes: Summary ids are `muni:<slug of label>`; the City of Pittsburgh is labeled "Pittsburgh".
+    fetch:
+      kind: http
+      url: https://data.wprdc.org/dataset/2fa577d6-1a6b-46a8-8165-27fecac1dee5/resource/b0cb0249-d1ba-45b7-9918-dc86fa8af04c/download/muni_boundaries.geojson
+      filename: muni_boundaries.geojson
+
+  - id: neighborhoods
+    title: Pittsburgh Neighborhoods
+    publisher: City of Pittsburgh, Department of City Planning (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/neighborhoods2
+    resourceUrl: https://data.wprdc.org/dataset/e672f13d-71c4-4a66-8f38-710e75ed80a4/resource/4af8e160-57e9-4ebf-a501-76ca1b42fc99/download/neighborhoods.geojson
+    geography: 90 neighborhoods, City of Pittsburgh
+    vintage: Resource last modified 2026-09-23
+    license: Creative Commons Attribution
+    fieldsRetained: [hood, geometry]
+    notes: Summary ids are `hood:<slug of hood>`.
+    fetch:
+      kind: http
+      url: https://data.wprdc.org/dataset/e672f13d-71c4-4a66-8f38-710e75ed80a4/resource/4af8e160-57e9-4ebf-a501-76ca1b42fc99/download/neighborhoods.geojson
+      filename: neighborhoods.geojson
+
+  - id: flood
+    title: FEMA National Flood Hazard Layer, S_FLD_HAZ_AR (DFIRM 42003C)
+    publisher: Federal Emergency Management Agency
+    catalogUrl: https://www.fema.gov/flood-maps/national-flood-hazard-layer
+    resourceUrl: https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28/query
+    geography: Flood hazard areas, Allegheny County PA (DFIRM_ID 42003C)
+    vintage: Effective NFHL as served on the retrieval date
+    license: Public domain (U.S. federal government work)
+    fieldsRetained: [FLD_ZONE, ZONE_SUBTY, SFHA_TF, geometry]
+    notes: Paged ArcGIS query (1000 features per page). Not a flood determination.
+    fetch:
+      kind: arcgis_query
+      url: https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28/query
+      where: "DFIRM_ID='42003C'"
+      outFields: FLD_ZONE,ZONE_SUBTY,SFHA_TF
+      pageSize: 1000
+      filename: s_fld_haz_ar_42003c.geojson
+
+  - id: slopes
+    title: Pittsburgh 25% or Greater Slope
+    publisher: City of Pittsburgh, Department of City Planning (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/25-or-greater-slope
+    resourceUrl: https://data.wprdc.org/dataset/0f643c56-1c53-4c88-824d-3a3876c0d3a0/resource/5ce91a56-0799-46ea-9585-13fa8db5979e/download/slopes.geojson
+    geography: City of Pittsburgh only
+    vintage: Layer created 2018-04; resource last modified 2026-09-23
+    license: License not specified on WPRDC (city open data)
+    fieldsRetained: [geometry]
+    notes: Coverage is the City; parcels outside the City get slope = -1 (not covered).
+    fetch:
+      kind: http
+      url: https://data.wprdc.org/dataset/0f643c56-1c53-4c88-824d-3a3876c0d3a0/resource/5ce91a56-0799-46ea-9585-13fa8db5979e/download/slopes.geojson
+      filename: slopes.geojson
+
+  - id: undermined
+    title: Undermined Areas
+    publisher: City of Pittsburgh, Department of City Planning (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/undermined-areas
+    resourceUrl: https://data.wprdc.org/dataset/ea849f53-0aa9-4621-b9fb-e8dc323d3a9e/resource/e1d96015-818f-46fb-88dd-85c20eacb96c/download/undermined.geojson
+    geography: City of Pittsburgh only
+    vintage: Layer created 2018-03; resource last modified 2026-09-23
+    license: License not specified on WPRDC (city open data)
+    fieldsRetained: [geometry]
+    notes: Historic mine maps are incomplete. Coverage is the City; parcels outside get mine = -1.
+    fetch:
+      kind: http
+      url: https://data.wprdc.org/dataset/ea849f53-0aa9-4621-b9fb-e8dc323d3a9e/resource/e1d96015-818f-46fb-88dd-85c20eacb96c/download/undermined.geojson
+      filename: undermined.geojson
+
+  - id: gtfs
+    title: Pittsburgh Regional Transit GTFS (latest feed in the GTFS Archive)
+    publisher: Pittsburgh Regional Transit (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/gtfs-archive
+    resourceUrl: https://data.wprdc.org/api/3/action/package_show?id=gtfs-archive
+    geography: PRT service area (Allegheny County and neighbors)
+    vintage: Resolved at fetch time to the newest GTFS_*.zip resource
+    license: Creative Commons Attribution
+    fieldsRetained: [stops.txt, stop_times.txt (trip_id, stop_id), trips.txt, routes.txt, calendar.txt, calendar_dates.txt]
+    notes: Scheduled trips are not a measure of reliability.
+    fetch:
+      kind: wprdc_latest_zip
+      dataset: gtfs-archive
+      namePattern: "GTFS_\\d+_(\\d{8})_"
+
+  - id: future_ready
+    title: Future Ready PA Index, school year 2024-2025
+    publisher: Pennsylvania Department of Education
+    catalogUrl: https://futurereadypa.org/Home/DataFiles
+    resourceUrl: https://futurereadypa.org/home/getdatafile?id=60
+    geography: Public schools, Pennsylvania
+    vintage: School year 2024-2025
+    license: Public record (Commonwealth of Pennsylvania)
+    notes: >-
+      School-level assessment percents for 2024-25. The tract sidebar names the
+      elementary, middle, and high school assigned to that tract, not a district
+      average. Suppressed cells (IS) stay null. This is not a magnet or charter
+      assignment, and it is not PDE's student-level district composite.
+    fieldsRetained:
+      - AUN
+      - Schl
+      - DistrictName
+      - Name
+      - GradesOffered
+      - Latitude
+      - Longitude
+      - OrganizationTypeCode
+      - Percent proficient or advanced, mathematics/algebra I, all students
+      - Percent proficient or advanced, ELA/literature, all students
+    fetch:
+      kind: http_files
+      files:
+        - url: https://futurereadypa.org/home/getdatafile?id=60
+          filename: future_ready_2024_2025.xlsx
+        - url: https://futurereadypa.org/home/getdatafile?id=58
+          filename: school_fast_facts_2024_2025.xlsx
+
+  - id: school_districts
+    title: TIGER/Line 2024 unified school districts, Pennsylvania
+    publisher: U.S. Census Bureau
+    catalogUrl: https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html
+    resourceUrl: https://www2.census.gov/geo/tiger/TIGER2024/UNSD/tl_2024_42_unsd.zip
+    geography: Unified school districts, Pennsylvania
+    vintage: TIGER/Line 2024
+    license: Public domain (U.S. federal government work)
+    fieldsRetained: [GEOID, NAME, geometry]
+    notes: Each tract is assigned the district that covers the largest share of its land.
+    fetch:
+      kind: http
+      url: https://www2.census.gov/geo/tiger/TIGER2024/UNSD/tl_2024_42_unsd.zip
+      filename: tl_2024_42_unsd.zip
+
+  - id: pps_attendance
+    title: Pittsburgh Public Schools feeder-pattern attendance boundaries
+    publisher: Pittsburgh Public Schools (via WPRDC)
+    catalogUrl: https://data.wprdc.org/dataset/pittsburgh-public-schools-feeder-pattern-attendance-boundaries
+    resourceUrl: https://data.wprdc.org/dataset/d9bf4afc-0fbb-4d12-9c63-7de76965f84e/resource/c02ba4a4-b689-4783-aa43-03dcba03122d/download/elementary.zip
+    geography: Pittsburgh School District feeder zones
+    vintage: Adopted for 2012-13; GIS published 2020
+    license: Public domain
+    fieldsRetained: [SchoolName, geometry]
+    notes: >-
+      Elementary, middle, and high school attendance zones. A Pittsburgh tract
+      is assigned the zone covering the most of its land (at least 5 percent).
+      Renamed schools are joined to the current Future Ready school: University
+      Prep to Milliones, Westinghouse to Academy at Westinghouse, and the North
+      Side high school zone to Perry. These are neighborhood feeder schools, not
+      magnets or charters. Outside Pittsburgh, no county attendance layer is
+      published, so the tract uses the nearest regular school of that level in
+      its district.
+    fetch:
+      kind: http_files
+      files:
+        - url: https://data.wprdc.org/dataset/d9bf4afc-0fbb-4d12-9c63-7de76965f84e/resource/c02ba4a4-b689-4783-aa43-03dcba03122d/download/elementary.zip
+          filename: elementary.zip
+        - url: https://data.wprdc.org/dataset/d9bf4afc-0fbb-4d12-9c63-7de76965f84e/resource/8bd697ec-5a24-4516-bc46-5024080ac8c2/download/middle.zip
+          filename: middle.zip
+        - url: https://data.wprdc.org/dataset/d9bf4afc-0fbb-4d12-9c63-7de76965f84e/resource/8b0533ad-0873-4903-baf4-c9a1eec521c6/download/high.zip
+          filename: high.zip

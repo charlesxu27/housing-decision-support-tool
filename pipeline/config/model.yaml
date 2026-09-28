@@ -1,0 +1,117 @@
+# Model thresholds and weights. Everything here is an assumption and is
+# hashed into manifest.configHash. See pipeline/README.md "Models".
+
+county:
+  fips: "42003"
+  name: Allegheny County, PA
+  cityLabel: Pittsburgh          # label used for the City of Pittsburgh in muni fields
+
+geography:
+  simplifyMetres:
+    tracts: 5
+    municipalities: 5
+    neighborhoods: 5
+    zoning: 2
+    flood: 10
+    slopes: 5
+    undermined: 5
+  coordinateDecimals: 6
+  # Overlay-only cleanup: polygon parts smaller than this are dropped from the
+  # browser GeoJSON (parcel flags still use the full-resolution layers).
+  overlayMinPartAreaM2:
+    slopes: 200
+    undermined: 0
+
+acs:
+  vintage: "2020-2024"
+  # Reliability flag: coefficient of variation above this, or fewer households
+  # than minHouseholds, marks a measure unreliable.
+  cvThreshold: 0.40
+  # A share is flagged only when its CV exceeds cvThreshold AND its absolute
+  # 90% MOE exceeds this many share points (0.05 = 5 percentage points).
+  # Small shares (e.g. 1% +/- 1.2%) have huge CVs but immaterial absolute error.
+  minAbsoluteMoe: 0.05
+  minHouseholds: 50
+  zScore: 1.645     # ACS publishes 90% MOEs
+
+need:
+  # Gap definitions are fixed in need.py; weights are per type over gap ids:
+  #   small     = hh_1_2 - (br_0_1 + br_2)
+  #   large     = (hh_5_plus - br_3_plus) + overcrowded
+  #   senior    = senior_alone
+  #   burden    = cost_burdened_renters
+  #   vacancy   = other_vacant_share        (rehab signal)
+  #   tight     = 1 - vacant_share          (market pressure for new homes)
+  #   renter    = renter_share
+  weights:
+    adu:               {small: 0.45, senior: 0.25, tight: 0.15, renter: 0.15}
+    duplex_triplex:    {small: 0.35, large: 0.15, burden: 0.2, tight: 0.15, renter: 0.15}
+    townhome:          {large: 0.4, tight: 0.3, renter: 0.3}
+    small_apartment:   {small: 0.35, burden: 0.25, senior: 0.1, tight: 0.15, renter: 0.15}
+    large_apartment:   {burden: 0.4, small: 0.2, renter: 0.25, tight: 0.15}
+    senior_accessible: {senior: 0.6, small: 0.2, burden: 0.2}
+    rehab_reuse:       {vacancy: 0.5, burden: 0.25, large: 0.1, renter: 0.15}
+    detached_sf:       {large: 0.5, tight: 0.3, renter: 0.2}
+  # Measures whose null/flag state makes a type's need `uncertain`
+  # (derived automatically from the weights above; listed here for the docs).
+  bands: tertiles
+
+fit:
+  lotSqft:
+    adu: 5000
+    duplexVacant: 3000
+    duplexConversion: 4000
+    duplexConversionFinishedSqft: 2400
+    townhome: 6000
+    smallApartmentMin: 8000
+    smallApartmentMax: 43560
+    largeApartment: 21780
+    senior: 8000
+    detached: 4000
+  transit:
+    radiusMetres: 800
+    smallApartmentTrips: 60
+    largeApartmentTrips: 120
+    seniorTrips: 60
+  # Parcels intersecting a FEMA regulatory floodway are excluded from every type.
+  # Parcels intersecting mapped >=25% slopes are excluded from these types:
+  slopeExcludedTypes: [adu, duplex_triplex, townhome, small_apartment, large_apartment, senior_accessible, detached_sf]
+  homesPerParcel:
+    adu: [1, 1]
+    duplex_triplex: [2, 3]
+    townhome: [3, 8]
+    small_apartment: [5, 19]
+    large_apartment: [20, 60]
+    senior_accessible: [10, 40]
+    rehab_reuse: [1, 2]
+    detached_sf: [1, 1]
+  # Assessment USEDESC -> use class (first match wins; regex, case-insensitive)
+  useClasses:
+    - {pattern: "VACANT", use: vacant}
+    - {pattern: "^SINGLE FAMILY", use: sf_detached}
+    - {pattern: "ROWHOUSE|TOWNHOUSE|TOWNHOME", use: sf_attached}
+    - {pattern: "^TWO FAMILY", use: two_family}
+    - {pattern: "^THREE FAMILY", use: three_family}
+    - {pattern: "FOUR FAMILY|APART|CONDOMINIUM|CONDO|MULTI", use: multi_unit}
+  commercialClasses: [C]        # assessment CLASS codes treated as commercial land for apartment rules
+  residentialClasses: [R]       # assessment CLASS codes counted in parcels.residential
+
+allowed:
+  # Statuses in tie-break order for the dominant status per tract.
+  statusPriority: [by_right, special_exception, conditional_use, not_permitted, unknown]
+  # Parcels counted when picking the dominant status: any residential use class or vacant land.
+  residentialCapableUses: [vacant, sf_detached, sf_attached, two_family, three_family, multi_unit]
+
+risk:
+  displacement: {renter: 0.4, burden: 0.3, income: 0.3}
+  floodwayShareGate: 0.5
+
+confidence:
+  outsideCityFactor: 0.85
+  requiredMeasures: [hh_1_2, hh_5_plus, senior_alone, cost_burdened_renters, overcrowded, renter_share, br_0_1, br_2, br_3_plus, other_vacant_share, vacant_share]
+
+tiles:
+  minZoom: 13
+  maxZoom: 16
+  fallbackMinZoom: 14
+  maxDirectoryMB: 150
