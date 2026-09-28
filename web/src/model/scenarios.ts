@@ -303,17 +303,17 @@ export function buildScenarios(
 }
 
 /**
- * Returns a weighted 0..100 score. Weight scale is arbitrary because weights
- * are normalized; zero or invalid weights contribute nothing. Value rows whose
- * score is null are excluded and the remaining weights are renormalized.
+ * Weighted 0..100 score from value rows. Weight scale is arbitrary because
+ * weights are normalized; zero or invalid weights contribute nothing. Rows
+ * whose score is null are excluded and the remaining weights are renormalized.
  */
-export function scoreScenario(
-  scenario: ScenarioDefinition,
+export function scoreByWeights(
+  valueScores: ValueScores,
   weights: ValueWeights,
-): ScenarioScore {
-  const excluded = VALUE_KEYS.filter((key) => scenario.valueScores[key] == null)
+): { score: number; contributions: Record<ValueKey, number>; excluded: ValueKey[] } {
+  const excluded = VALUE_KEYS.filter((key) => valueScores[key] == null)
   const weighted = VALUE_KEYS.map((key) => {
-    const value = scenario.valueScores[key]
+    const value = valueScores[key]
     return {
       key,
       weight: value == null ? 0 : validWeight(weights[key]),
@@ -335,10 +335,25 @@ export function scoreScenario(
   )
 
   return {
-    scenarioId: scenario.id,
     score: Math.round(rawScore * 10) / 10,
     contributions,
     excluded,
+  }
+}
+
+/**
+ * Returns a weighted 0..100 score. Weight scale is arbitrary because weights
+ * are normalized; zero or invalid weights contribute nothing. Value rows whose
+ * score is null are excluded and the remaining weights are renormalized.
+ */
+export function scoreScenario(
+  scenario: ScenarioDefinition,
+  weights: ValueWeights,
+): ScenarioScore {
+  const result = scoreByWeights(scenario.valueScores, weights)
+  return {
+    scenarioId: scenario.id,
+    ...result,
   }
 }
 

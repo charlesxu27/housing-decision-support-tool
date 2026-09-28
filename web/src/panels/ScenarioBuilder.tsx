@@ -233,9 +233,10 @@ export function ScenarioBuilder({
             {targetHomes} new homes in {placeName}
           </h2>
           <p className="muted">
-            Facts come from this tract and stay fixed. Your values change how
-            scenarios rank. Metrics marked not available are excluded from the
-            score.
+            Each template uses the same assumed {targetHomes}-home target so
+            its tradeoffs can be compared at an equal scale. It is a comparison
+            baseline, not a recommended target for the tract. Facts come from
+            this tract and stay fixed; your values change how scenarios rank.
           </p>
         </div>
         <span className="provenance user-value">Your values</span>

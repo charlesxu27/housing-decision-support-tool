@@ -998,6 +998,12 @@ input:focus-visible {
   border-color: #e4d0b8;
 }
 
+.provenance.assumption {
+  color: #6a4b12;
+  background: #f7f1de;
+  border-color: #e4d7b0;
+}
+
 .source-cite {
   position: relative;
   display: inline-flex;
@@ -2575,6 +2581,316 @@ summary:focus-visible {
   max-width: none;
 }
 
+.compare-bar {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.2fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0 0;
+  padding: 12px 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.compare-bar__intro p:last-child {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.compare-bar__empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.compare-bar__slots ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.compare-bar__slots li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px 5px 10px;
+  background: #f3f4ef;
+  border: 1px solid #d6dfda;
+  border-radius: 999px;
+  color: #2f3a33;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.compare-bar__slots button {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0;
+  color: #52645c;
+  background: white;
+  border: 1px solid #d6dfda;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.compare-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.compare-bar__mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 10px;
+  color: var(--green-dark);
+  background: var(--green-pale);
+  border: 1px solid #aac6ba;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.compare-bar__mode:hover {
+  background: #d9eae2;
+}
+
+.compare-bar__mode input {
+  appearance: none;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  place-content: center;
+  background: white;
+  border: 1.5px solid #78a493;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.compare-bar__mode input::before {
+  width: 9px;
+  height: 5px;
+  content: "";
+  border: solid white;
+  border-width: 0 0 2px 2px;
+  opacity: 0;
+  transform: translateY(-1px) rotate(-45deg) scale(0);
+  transition: 120ms ease-out;
+}
+
+.compare-bar__mode input:checked {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.compare-bar__mode input:checked::before {
+  opacity: 1;
+  transform: translateY(-1px) rotate(-45deg) scale(1);
+}
+
+.compare-bar__note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #6a3d12;
+  font-size: 11px;
+}
+
+.compare-backdrop {
+  position: fixed;
+  z-index: 24;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(17, 32, 26, 0.45);
+  backdrop-filter: blur(3px);
+  animation: backdrop-in 160ms ease-out;
+}
+
+.compare-modal {
+  width: min(1100px, 100%);
+  max-height: min(92vh, 920px);
+  overflow: auto;
+  padding: 22px 24px 24px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(15, 31, 24, 0.22);
+}
+
+.compare-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.compare-modal__header h2 {
+  margin: 4px 0 8px;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.compare-modal__header .muted {
+  max-width: 46rem;
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.compare-modal__close {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: #52645c;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #d6dfda;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.compare-modal__layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 2.3fr);
+  gap: 18px;
+}
+
+.compare-rank-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.compare-rank-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: white;
+}
+
+.compare-rank-card.recommended {
+  border-color: #8bb9a8;
+  box-shadow: inset 0 3px var(--green);
+}
+
+.compare-rank-card__sub,
+.compare-rank-card__status {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.compare-rank-card .score-reason {
+  min-height: 0;
+  margin: 0 0 8px;
+  color: #2f3a33;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.compare-contributions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.compare-contributions li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  color: #667069;
+  font-size: 10px;
+}
+
+.compare-contributions li > span:last-child {
+  color: #2f3a33;
+  font-weight: 750;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.compare-table caption {
+  caption-side: bottom;
+  padding-top: 8px;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: left;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 8px 9px;
+  border-top: 1px solid #edf0ec;
+  vertical-align: top;
+  text-align: left;
+}
+
+.compare-table thead th {
+  border-top: 0;
+  color: #2f3a33;
+  font-size: 12px;
+}
+
+.compare-table tbody th {
+  width: 22%;
+  color: #43534a;
+  font-weight: 650;
+}
+
+.compare-table__metric {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.compare-table__metric .provenance {
+  flex: 0 0 auto;
+}
+
+.compare-unavailable {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: #59645d;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.why-color__compare {
+  width: 100%;
+  margin: 12px 0 4px;
+}
+
 @media (max-width: 900px) {
   .hero {
     grid-template-columns: 1fr;
@@ -2708,6 +3024,15 @@ summary:focus-visible {
   .planning-context {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .compare-bar,
+  .compare-modal__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-bar__actions {
+    justify-content: flex-start;
   }
 
   .map-stage > .workspace-map {

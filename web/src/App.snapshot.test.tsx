@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -79,6 +79,57 @@ describe('App with a loaded snapshot', () => {
       within(report).getByText(/not available in this build/),
     ).toBeTruthy()
     expect(document.body.textContent).not.toMatch(/fixture|illustrative/i)
+  })
+
+  it('compares two tracts and re-ranks them under a value lens', async () => {
+    const second = buildArea({
+      id: '42003141200',
+      name: 'Tract 1412',
+      neighborhood: 'Homewood South',
+      neighborhoods: ['Homewood South'],
+      needScores: { duplex_triplex: 0.9 },
+      households: { cost_burdened_renters: 0.7 },
+      risk: { displacement: 0.8, floodShare: 0.02 },
+    })
+    const metrics = buildAreaMetrics({
+      areas: [
+        buildArea({
+          risk: { displacement: 0.2, floodShare: 0.4 },
+          needScores: { duplex_triplex: 0.3 },
+        }),
+        second,
+      ],
+      summaries: [
+        buildSummary(),
+        buildSummary({
+          id: 'hood:homewood-south',
+          label: 'Homewood South',
+          members: [{ id: second.id, weight: 900 }],
+        }),
+      ],
+    })
+    renderApp(
+      '/map?place=42003141200&type=duplex_triplex',
+      mockSnapshotFetch({ '/data/area_metrics.json': metrics }),
+    )
+
+    await screen.findByLabelText('Interactive housing match map')
+    fireEvent.click(screen.getByRole('button', { name: 'Add Tract 1412' }))
+
+    const place = screen.getByRole('combobox', { name: 'Place' })
+    fireEvent.click(place)
+    fireEvent.click(screen.getByRole('tab', { name: /Pittsburgh neighborhoods/ }))
+    fireEvent.mouseDown(screen.getByRole('option', { name: /Homewood North/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add Tract 1307' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Compare 2 tracts' }))
+
+    const dialog = screen.getByRole('dialog', { name: /2 tracts/ })
+    expect(
+      within(dialog).getByText(/Need, fit, zoning, and hazards are facts/),
+    ).toBeTruthy()
+    expect(within(dialog).getByText('Your values')).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Residents first' }))
+    expect(within(dialog).getAllByText(/Leads|Trails|Tied/).length).toBeGreaterThan(0)
   })
 
   it('falls back to the first loaded tract for an unknown deep link', async () => {

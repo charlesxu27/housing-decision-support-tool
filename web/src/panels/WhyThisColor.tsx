@@ -27,6 +27,9 @@ interface WhyThisColorProps {
   lookupAllowed: LookupAllowed
   sources: readonly SourceRecord[]
   onClose: () => void
+  compareAdded?: boolean
+  compareDisabledReason?: string | null
+  onAddToCompare?: () => void
 }
 
 const STATUS_VERDICTS: Record<MatchStatus, string> = {
@@ -192,6 +195,9 @@ export function WhyThisColor({
   lookupAllowed,
   sources,
   onClose,
+  compareAdded = false,
+  compareDisabledReason = null,
+  onAddToCompare,
 }: WhyThisColorProps) {
   const explanation = explainMatch({
     need: area.need[type],
@@ -312,6 +318,18 @@ export function WhyThisColor({
           )
         })}
       </ol>
+
+      {onAddToCompare ? (
+        <button
+          className="button button-secondary button-small why-color__compare"
+          type="button"
+          disabled={compareAdded || Boolean(compareDisabledReason)}
+          title={compareDisabledReason ?? undefined}
+          onClick={onAddToCompare}
+        >
+          {compareAdded ? 'Added to compare' : 'Add to compare'}
+        </button>
+      ) : null}
 
       <p className="why-color__footnote">
         {Math.round(area.confidence * 100)}% data coverage · GEOID {area.id} ·

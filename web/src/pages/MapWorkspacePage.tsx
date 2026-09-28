@@ -17,7 +17,6 @@ import {
   areaLabel,
   areaStatus,
   heaviestMember,
-  parcelStatus,
   summariesForArea,
 } from '../model/area'
 import {
@@ -27,6 +26,16 @@ import {
   type ScenarioDefinition,
   type ValueWeights as ModelValueWeights,
 } from '../model/scenarios'
+import {
+  addCompareRef,
+  buildProfiles,
+  canAddCompare,
+  compareRefId,
+  removeCompareRef,
+  type CompareRef,
+} from '../model/compare'
+import { CompareBar } from '../panels/CompareBar'
+import { CompareModal } from '../panels/CompareModal'
 import { HowMapGenerated } from '../panels/HowMapGenerated'
 import { ParcelCard } from '../panels/ParcelCard'
 import { PlaceReport, type HousingTypeRow } from '../panels/PlaceReport'
@@ -45,7 +54,7 @@ import {
   type MapConfiguration,
   type MapMode,
 } from '../shared/mapState'
-import { DecisionRibbon, MethodStory } from '../story'
+import { MethodStory } from '../story'
 
 const TARGET_HOMES = 40
 
@@ -221,6 +230,9 @@ function Workspace({ snapshot }: WorkspaceProps) {
       speedToBuild: BALANCED_WEIGHTS.speedToBuild * 50,
     },
   )
+  const [compareItems, setCompareItems] = useState<CompareRef[]>([])
+  const [compareOpen, setCompareOpen] = useState(false)
+  const [clickToAdd, setClickToAdd] = useState(false)
 
   const selected = areasById.get(selectedId) ?? areas[0]
   const matchingHandoff =
@@ -290,11 +302,45 @@ function Workspace({ snapshot }: WorkspaceProps) {
   )
 
   const scenarios = useMemo(() => buildScenarios(selected, TARGET_HOMES), [selected])
+  const compareProfiles = useMemo(
+    () => buildProfiles(compareItems, areasById, selectedType, lookupAllowed),
+    [areasById, compareItems, lookupAllowed, selectedType],
+  )
 
   const copyViewLink = async () => {
     await navigator.clipboard.writeText(window.location.href)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1800)
+  }
+
+  const currentCompareRef: CompareRef = selectedParcel
+    ? { kind: 'parcel', pin: selectedParcel.pin, parcel: selectedParcel }
+    : { kind: 'tract', id: selected.id }
+  const currentAlreadyAdded = compareItems.some(
+    (item) => compareRefId(item) === compareRefId(currentCompareRef),
+  )
+  const addDisabledReason = currentAlreadyAdded
+    ? null
+    : canAddCompare(compareItems, currentCompareRef)
+  const compareLabels = compareItems.map((item) => {
+    if (item.kind === 'parcel') return `PIN ${item.pin}`
+    const area = areasById.get(item.id)
+    return area ? area.name : item.id
+  })
+  const comparedIds = compareItems
+    .filter((item): item is Extract<CompareRef, { kind: 'tract' }> => item.kind === 'tract')
+    .map((item) => item.id)
+  const comparedPins = compareItems
+    .filter((item): item is Extract<CompareRef, { kind: 'parcel' }> => item.kind === 'parcel')
+    .map((item) => item.pin)
+
+  const addCurrentToCompare = () => {
+    setCompareItems((current) => addCompareRef(current, currentCompareRef).items)
+  }
+
+  const addFromMap = (next: CompareRef) => {
+    if (!clickToAdd) return
+    setCompareItems((current) => addCompareRef(current, next).items)
   }
 
   const selectArea = (id: string) => {
@@ -366,41 +412,26 @@ function Workspace({ snapshot }: WorkspaceProps) {
         onDimensionChange={setIs3d}
       />
 
-      <DecisionRibbon
-        placeName={
-          selectedParcel ? `PIN ${selectedParcel.pin}` : areaLabel(selected)
+      <CompareBar
+        items={compareItems}
+        labels={compareLabels}
+        currentLabel={
+          selectedParcel ? `PIN ${selectedParcel.pin}` : selected.name
         }
-        typeLabel={TYPE_LABELS[selectedType]}
-        need={selected.need[selectedType]}
-        fit={
-          selectedParcel
-            ? selectedParcel[`f_${selectedType}`] === 1
-              ? 'high'
-              : 'low'
-            : selected.fit[selectedType].band
+        currentKind={selectedParcel ? 'parcel' : 'tract'}
+        addDisabledReason={addDisabledReason}
+        currentAlreadyAdded={currentAlreadyAdded}
+        clickToAdd={clickToAdd}
+        onClickToAddChange={setClickToAdd}
+        onAddCurrent={addCurrentToCompare}
+        onRemove={(item) =>
+          setCompareItems((current) => removeCompareRef(current, item))
         }
-        allowed={
-          selectedParcel
-            ? lookupAllowed(selectedParcel.zone, selectedType)
-            : selected.allowed[selectedType]
-        }
-        action={
-          selectedParcel
-            ? parcelStatus(
-                selectedParcel,
-                selected,
-                selectedType,
-                lookupAllowed,
-              )
-            : areaStatus(selected, selectedType)
-        }
-        fitExplanation={
-          selectedParcel
-            ? selectedParcel[`f_${selectedType}`] === 1
-              ? 'This lot passes the site-fit screen for this housing type.'
-              : 'This lot does not pass the site-fit screen for this housing type.'
-            : undefined
-        }
+        onClear={() => {
+          setCompareItems([])
+          setCompareOpen(false)
+        }}
+        onCompare={() => setCompareOpen(true)}
       />
 
       <div className="map-stage">
@@ -416,12 +447,16 @@ function Workspace({ snapshot }: WorkspaceProps) {
               selectArea(id)
               setSelectedParcel(null)
               setExplanationOpen(true)
+              addFromMap({ kind: 'tract', id })
             }}
             selectedPin={selectedParcel?.pin ?? null}
+            comparedIds={comparedIds}
+            comparedPins={comparedPins}
             onSelectParcel={(parcel) => {
               if (areasById.has(parcel.tract)) setSelectedId(parcel.tract)
               setSelectedParcel(parcel)
               setExplanationOpen(false)
+              addFromMap({ kind: 'parcel', pin: parcel.pin, parcel })
             }}
           />
           <Legend mode={mode} />
@@ -457,6 +492,9 @@ function Workspace({ snapshot }: WorkspaceProps) {
                 zoningDraft={zoningDraft}
                 sources={manifest.sources}
                 onClose={() => setSelectedParcel(null)}
+                compareAdded={currentAlreadyAdded}
+                compareDisabledReason={addDisabledReason}
+                onAddToCompare={addCurrentToCompare}
               />
             ) : (
               <WhyThisColor
@@ -469,6 +507,9 @@ function Workspace({ snapshot }: WorkspaceProps) {
                 lookupAllowed={lookupAllowed}
                 sources={manifest.sources}
                 onClose={() => setExplanationOpen(false)}
+                compareAdded={currentAlreadyAdded}
+                compareDisabledReason={addDisabledReason}
+                onAddToCompare={addCurrentToCompare}
               />
             )}
           </aside>
@@ -503,7 +544,7 @@ function Workspace({ snapshot }: WorkspaceProps) {
           <summary>
             <span>
               <small>Your values</small>
-              Compare {TARGET_HOMES}-home scenarios for this tract
+              Compare housing approaches at the same scale
             </span>
             <strong>Open scenarios</strong>
           </summary>
@@ -538,6 +579,18 @@ function Workspace({ snapshot }: WorkspaceProps) {
         {zoningDraft ? ' from a draft zoning matrix' : ''}. Verify
         authoritative sources and engage affected communities before acting.
       </p>
+
+      {compareOpen && compareProfiles.length >= 2 ? (
+        <CompareModal
+          typeLabel={TYPE_LABELS[selectedType]}
+          profiles={compareProfiles}
+          weights={weights}
+          onWeightChange={(key, value) =>
+            setWeights((current) => ({ ...current, [key]: value }))
+          }
+          onClose={() => setCompareOpen(false)}
+        />
+      ) : null}
 
       {copilotOpen ? (
         <div
@@ -581,8 +634,8 @@ function WorkspaceHeader({ children }: { children?: ReactNode }) {
         <p className="page-kicker">Interactive prototype workspace</p>
         <h1>Housing match map</h1>
         <p>
-          Inspect the core map first, then open reports, scenarios, and method
-          details as needed.
+          Inspect the core map first, then compare places, open reports,
+          scenarios, and method details as needed.
         </p>
       </div>
       {children ? <div className="workspace-actions">{children}</div> : null}

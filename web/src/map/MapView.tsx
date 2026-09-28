@@ -60,6 +60,10 @@ export interface MapViewProps {
   focus: MapFocus
   /** Parcel PIN to outline, when a lot is selected. */
   selectedPin: string | null
+  /** Tract GEOIDs currently in the comparison set. */
+  comparedIds?: readonly string[]
+  /** Parcel PINs currently in the comparison set. */
+  comparedPins?: readonly string[]
   onSelectArea: (id: string) => void
   onSelectParcel: (parcel: ParcelTileProperties) => void
 }
@@ -133,6 +137,8 @@ export function MapView({
   is3d,
   focus,
   selectedPin,
+  comparedIds = [],
+  comparedPins = [],
   onSelectArea,
   onSelectParcel,
 }: MapViewProps) {
@@ -228,6 +234,13 @@ export function MapView({
     return feature ? [feature] : []
   }, [selected.id, tracts.data])
 
+  const comparedFeatures = useMemo(() => {
+    const collection = asFeatureCollection(tracts.data)
+    if (!collection || comparedIds.length === 0) return []
+    const ids = new Set(comparedIds)
+    return collection.features.filter((feature) => ids.has(feature.properties.id))
+  }, [comparedIds, tracts.data])
+
   const focusSummary = useCallback(
     (summary: SummaryArea) => {
       const tract = heaviestMember(summary, areasById)
@@ -320,6 +333,17 @@ export function MapView({
       },
     }),
     new GeoJsonLayer<AnalysisAreaProperties>({
+      id: 'compared-tracts',
+      data: comparedFeatures,
+      visible: !showSummaries && comparedFeatures.length > 0,
+      pickable: false,
+      stroked: true,
+      filled: false,
+      getLineColor: [196, 140, 32, 255],
+      getLineWidth: 2.5,
+      lineWidthUnits: 'pixels',
+    }),
+    new GeoJsonLayer<AnalysisAreaProperties>({
       id: 'selected-tract',
       data: selectedFeature,
       visible: !showSummaries,
@@ -362,11 +386,18 @@ export function MapView({
             190,
           )
         },
-        getLineColor: (feature) =>
-          feature.properties.pin === selectedPin
-            ? [23, 34, 29, 255]
-            : [255, 255, 255, 120],
-        getLineWidth: (feature) => (feature.properties.pin === selectedPin ? 2.5 : 0.5),
+        getLineColor: (feature) => {
+          const pin = feature.properties.pin
+          if (pin === selectedPin) return [23, 34, 29, 255]
+          if (comparedPins.includes(pin)) return [196, 140, 32, 255]
+          return [255, 255, 255, 120]
+        },
+        getLineWidth: (feature) => {
+          const pin = feature.properties.pin
+          if (pin === selectedPin) return 2.5
+          if (comparedPins.includes(pin)) return 2
+          return 0.5
+        },
         lineWidthUnits: 'pixels',
         onClick: ({ object }) => {
           const feature = object as Feature<Geometry, ParcelTileProperties> | undefined
@@ -375,8 +406,8 @@ export function MapView({
         },
         updateTriggers: {
           getFillColor: [mode, type, areasById, lookupAllowed],
-          getLineColor: [selectedPin],
-          getLineWidth: [selectedPin],
+          getLineColor: [selectedPin, comparedPins],
+          getLineWidth: [selectedPin, comparedPins],
         },
       }),
     )

@@ -29,6 +29,9 @@ interface ParcelCardProps {
   zoningDraft: boolean
   sources: readonly SourceRecord[]
   onClose: () => void
+  compareAdded?: boolean
+  compareDisabledReason?: string | null
+  onAddToCompare?: () => void
 }
 
 const USE_LABELS: Record<ParcelTileProperties['use'], string> = {
@@ -72,6 +75,9 @@ export function ParcelCard({
   zoningDraft,
   sources,
   onClose,
+  compareAdded = false,
+  compareDisabledReason = null,
+  onAddToCompare,
 }: ParcelCardProps) {
   const insight = explainParcel({
     parcel,
@@ -291,6 +297,18 @@ export function ParcelCard({
           </tbody>
         </table>
       </details>
+
+      {onAddToCompare ? (
+        <button
+          className="button button-secondary button-small why-color__compare"
+          type="button"
+          disabled={compareAdded || Boolean(compareDisabledReason)}
+          title={compareDisabledReason ?? undefined}
+          onClick={onAddToCompare}
+        >
+          {compareAdded ? 'Added to compare' : 'Add to compare'}
+        </button>
+      ) : null}
 
       <p className="why-color__footnote">
         {area ? `${area.name} · GEOID ${area.id}` : `Tract ${parcel.tract}`} · screening
